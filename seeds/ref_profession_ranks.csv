@@ -1,0 +1,5 @@
+rank,name,min_skill,max_skill,required_level,source
+1,Apprentice,1,75,,Classic Era rules; required level unverified on Forever
+2,Journeyman,50,150,10,user planner (train Journeyman at 10); skill bounds Classic Era rules
+3,Expert,125,225,20,user planner (train Expert at 20); skill bounds Classic Era rules
+4,Artisan,200,300,35,Classic Era rules; unverified on Forever

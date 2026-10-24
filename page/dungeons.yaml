@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=./page-schema-1.json
+title: Dungeons
+body:
+  - kind: binder
+    name: dungeons
+    observe: dungeon
+    params:
+      allow_add: false
+      default_sort: { column: min_level, direction: asc }
+      filter: [kind, ">min_level"]
+      columns:
+        name: { label: Dungeon, width: 240, pin: true }
+        kind: { label: Kind, width: 100, color: { blue: [Dungeon], magenta: [Raid], yellow: [Battleground] } }
+        min_level: { label: From, width: 60 }
+        max_level: { label: To, width: 60 }
+        level_source: { label: Levels from, width: 200 }
+        max_players: { label: Players, width: 70 }
+        tuning_min_level: { label: Client tuning, width: 100, tooltip: "The client's own ContentTuning level; doesn't match known ranges" }
+        map_name: { label: Map, width: 180 }
+        lfg_dungeon_id: { label: ID, width: 70 }

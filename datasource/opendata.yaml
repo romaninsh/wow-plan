@@ -1,4 +1,0 @@
-# yaml-language-server: $schema=./datasource-schema-1.json
-type: sqlite
-description: WoW Forever open dataset (github.com/wowlayerup-forever/opendata), built from refs/opendata with tools/build_sqlite.py. Read-only; rebuild to refresh.
-url: sqlite:data/opendata.sqlite?mode=ro

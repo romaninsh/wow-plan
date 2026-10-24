@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=./page-schema-1.json
+title: Zones
+body:
+  - kind: binder
+    name: zones
+    observe: zone
+    params:
+      allow_add: false
+      default_sort: { column: min_level, direction: asc }
+      filter: [kind, map_name, ">min_level", ">max_level"]
+      columns:
+        name: { label: Zone, width: 220, pin: true }
+        kind: { label: Kind, width: 100, color: { blue: [Dungeon], magenta: [Raid], yellow: [Battleground] } }
+        map_name: { label: Continent / map, width: 160 }
+        min_level: { label: From, width: 60 }
+        max_level: { label: To, width: 60 }
+        level_source:
+          label: Levels from
+          width: 100
+          labels: { exploration: Sub-areas, seed: Our seed }
+          color: { muted: [exploration], green: [seed] }
+        sub_area_count: { label: Sub-areas, width: 80 }
+        quest_count: { label: Quests seen, width: 90 }
+        zone_id: { label: ID, width: 70 }

@@ -1,32 +1,41 @@
--- Crafting recipes: the profession, skill thresholds, what it makes and how many reagents.
--- The yellow threshold is not in client data; green and gray are.
+-- Crafting recipes: profession, skill thresholds (orange/required, green, gray; yellow is not in
+-- client data), what it makes, the recipe item that teaches it, and how many reagents it takes.
 with reagent_counts as (
-    select recipe_spell_id, count(*) as reagent_count
-    from {{ ref('recipe_reagents') }}
-    group by recipe_spell_id
+    select spell_id, count(*) as reagent_count
+    from {{ ref('stg_wago__spell_reagents') }}
+    group by spell_id
+),
+
+tools as (
+    select spell_id, to_json(list(item_id order by item_id))::varchar as tool_item_ids
+    from {{ ref('stg_wago__spell_tools') }}
+    group by spell_id
 )
 
 select
     r.recipe_spell_id,
-    r.name,
+    s.name,
     r.skill_line_id,
     sk.name                         as profession_name,
     r.skill_required,
-    nullif(r.skill_green, 0)        as skill_green,
-    nullif(r.skill_gray, 0)         as skill_gray,
+    r.skill_green,
+    r.skill_gray,
     r.creates_item_id,
     i.name                          as creates_item_name,
     i.quality                       as creates_item_quality,
+    i.required_level                as creates_item_required_level,
     r.creates_count,
-    coalesce(rc.reagent_count, 0)   as reagent_count,
-    case when r.tool_item_ids is not null then to_json(r.tool_item_ids)::varchar end as tool_item_ids,
-    r.cast_ms,
-    r.source_kind,
-    r.source_ref,
-    r.build_first_seen,
-    r.build_last_seen,
-    r.confidence
-from {{ ref('stg_opendata__recipes') }} as r
+    rc.reagent_count,
+    r.taught_by_item_id,
+    tb.name                         as taught_by_item_name,
+    t.tool_item_ids,
+    s.cast_ms,
+    s.description,
+    s.build
+from {{ ref('int_recipes') }} as r
+join {{ ref('stg_wago__spells') }} as s on s.spell_id = r.recipe_spell_id
 left join {{ ref('stg_wago__skill_lines') }} as sk on sk.skill_line_id = r.skill_line_id
-left join {{ ref('stg_opendata__items') }} as i on i.item_id = r.creates_item_id
-left join reagent_counts as rc using (recipe_spell_id)
+left join {{ ref('stg_wago__items') }} as i on i.item_id = r.creates_item_id
+left join {{ ref('stg_wago__items') }} as tb on tb.item_id = r.taught_by_item_id
+left join reagent_counts as rc on rc.spell_id = r.recipe_spell_id
+left join tools as t on t.spell_id = r.recipe_spell_id

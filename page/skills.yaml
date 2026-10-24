@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=./page-schema-1.json
+title: Skills and professions
+body:
+  - kind: binder
+    name: skills
+    observe: skill_line
+    params:
+      allow_add: false
+      default_sort: { column: recipe_count, direction: desc }
+      filter: [category, is_craft]
+      columns:
+        name: { label: Skill, width: 220, pin: true }
+        category: { label: Category, width: 110, color: { green: [Profession], blue: [Secondary] } }
+        recipe_count: { label: Recipes, width: 80 }
+        is_craft: { label: Crafts, width: 70 }
+        description: { label: Description, width: 380 }
+        skill_line_id: { label: ID, width: 70 }
+  - kind: label
+    params: { text: "Trainer ranks", style: heading, icon: GraduationCap }
+  - kind: grid
+    observe: profession_rank
+    height: 170
+    params:
+      default_sort: { column: rank, direction: asc }
+      columns:
+        name: { label: Rank, width: 120 }
+        min_skill: { label: From skill, width: 90 }
+        max_skill: { label: Up to, width: 70 }
+        required_level: { label: Character level, width: 120 }
+        source: { label: Source, width: 420 }

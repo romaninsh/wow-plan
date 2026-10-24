@@ -1,19 +1,32 @@
 # yaml-language-server: $schema=./table-schema-1.json
-datasource: opendata
+# Quests from players' client caches (opendata): only those someone has seen so far.
+datasource: wow
 title: Quests
-table: client_quests
+table: quests
 columns:
   - { name: quest_id, label: ID, type: int, flags: [id, searchable] }
-  - { name: name, label: Name, type: string, flags: [title, searchable] }
+  - { name: name, label: Quest, type: string, flags: [title, searchable] }
   - { name: quest_level, label: Level, type: int }
   - { name: min_level, label: Min level, type: int }
-  - { name: zone_or_sort, label: Zone, type: int }
-  - { name: prev_quest_id, label: Previous quest, type: int }
+  - name: zone_id
+    label: Zone ID
+    type: int
+    references: { table: zone, kind: has_one, name: zone }
+  - { name: zone_name, label: Zone, type: string }
+  - { name: quest_sort_name, label: Category, type: string }
+  - { name: category_name, label: Zone or category, type: string, flags: [searchable] }
+  - { name: quest_type_name, label: Type, type: string }
   - { name: next_quest_id, label: Next quest, type: int }
   - { name: objectives, label: Objectives, type: string, flags: [searchable] }
   - { name: description, label: Description, type: string }
-  - { name: objective_items, label: Objective items, type: string }
-  - { name: objective_npcs, label: Objective NPCs, type: string }
-  - { name: rewards, label: Rewards, type: string }
+  - { name: reward_xp, label: XP, type: int }
+  - { name: reward_money_copper, label: Money (copper), type: int }
+  - { name: objective_item_count, label: Items to bring, type: int }
+  - { name: objective_npc_count, label: Kill targets, type: int }
+  - { name: reward_item_count, label: Reward items, type: int }
+  - { name: reward_choice_count, label: Choice items, type: int }
   - { name: confidence, label: Confidence, type: string }
-  - { name: build_last_seen, label: Build, type: string }
+  - { name: build_last_seen, label: Seen in build, type: string }
+references:
+  items: { table: quest_item, kind: has_many, foreign_key: quest_id }
+  npcs: { table: quest_npc, kind: has_many, foreign_key: quest_id }

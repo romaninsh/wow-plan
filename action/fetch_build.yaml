@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Downloads the wago.tools tables (hotfixes merged) a build is missing into refs/wago/<build>/,
+# and clones opendata if it isn't there. Never re-downloads a file: delete one to fetch it again.
+# Runs the composer `pipeline` service (Python only, nothing to install); --no-deps so it doesn't
+# touch the running postgres.
+kind: command
+description: |
+  Download the game data tables for a Forever client build from wago.tools, with hotfixes merged.
+  Only tables not downloaded yet are fetched. Leave the build empty for the newest Forever build.
+dialog:
+  title: "Fetch build"
+  confirm_label: "Fetch"
+form:
+  fields:
+    - name: build
+      type: string
+      label: "Client build (empty = newest on wago.tools)"
+      required: false
+      default: ""
+terminal:
+  command: docker
+  args: ["compose", "-f", "composer.yaml", "--profile", "pipeline", "run", "--rm", "--no-deps", "pipeline", "fetch", "${form.build}"]

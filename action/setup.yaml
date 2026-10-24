@@ -1,0 +1,57 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# First-run setup: start the services, fetch the newest Forever build, import it.
+# Every step is skippable; the Data page has the same Fetch and Import buttons.
+kind: wizard
+description: |
+  Start the database, download the newest Forever build's tables and import them.
+dialog:
+  title: "Set up the reference data"
+  size: xl
+steps:
+  - name: welcome
+    title: "Welcome"
+    body:
+      - kind: markdown
+        text: |
+          # The wow-plan reference database
+
+          Three steps, each skippable:
+
+          1. **Services**: start Postgres (and MongoDB, for guides later). Vantage manages the
+             containers from then on.
+          2. **Fetch**: download the game data tables for the newest World of Warcraft: Forever
+             client build from wago.tools, with hotfixes merged. About 40 MB, under a minute.
+          3. **Import**: transform, test and publish them to Postgres. About a minute.
+
+  - name: services
+    title: "Services"
+    composer: true
+    body:
+      - kind: markdown
+        text: |
+          Press **Start** and wait for the green dots. The container engine (Docker Desktop,
+          colima, OrbStack) must be running.
+
+  - name: data
+    title: "Fetch and import"
+    body:
+      - kind: markdown
+        text: |
+          Fetch first, then import. Each opens a terminal with its progress; leave the build field
+          empty for the newest Forever build.
+      - kind: button
+        params:
+          label: "Fetch build"
+          icon: Download
+          # language=rhai
+          action: |
+            actions.fetch_build();
+      - kind: button
+        params:
+          label: "Import build"
+          icon: RefreshCw
+          style: primary
+          # language=rhai
+          action: |
+            actions.import_build();

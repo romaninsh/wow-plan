@@ -1,0 +1,22 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Rebuilds the reference database from a fetched build: dbt (staging, stats, marts, tests) in
+# DuckDB inside the container, then a fresh Postgres schema swapped in as `wow`. A failing test
+# stops before the swap, so the pages keep the previous build. Needs postgres running.
+kind: command
+description: |
+  Rebuild the reference database from a build already fetched: transform, test, then publish to
+  Postgres. Leave the build empty for the newest fetched build. Takes about a minute.
+dialog:
+  title: "Import build"
+  confirm_label: "Import"
+form:
+  fields:
+    - name: build
+      type: string
+      label: "Client build (empty = newest fetched)"
+      required: false
+      default: ""
+terminal:
+  command: docker
+  args: ["compose", "-f", "composer.yaml", "--profile", "pipeline", "run", "--rm", "--no-deps", "pipeline", "import", "${form.build}"]

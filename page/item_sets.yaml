@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=./page-schema-1.json
+title: Item sets
+body:
+  - kind: binder
+    name: item_sets
+    observe: item_set
+    params:
+      allow_add: false
+      default_sort: { column: name, direction: asc }
+      columns:
+        name: { label: Set, width: 260, pin: true }
+        item_count: { label: Items, width: 60 }
+        required_skill_name: { label: Required skill, width: 140 }
+        required_skill_rank: { label: Skill rank, width: 80 }
+        item_set_id: { label: ID, width: 70 }

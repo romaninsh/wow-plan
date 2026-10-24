@@ -7,11 +7,10 @@ body:
     params:
       allow_add: false
       default_sort: { column: name, direction: asc }
+      filter: [required_skill_name, ">required_skill_rank"]
       columns:
+        name: { label: Object, width: 280, pin: true }
+        required_skill_name: { label: Needs skill, width: 120 }
+        required_skill_rank: { label: Skill rank, width: 80 }
+        object_type: { label: Type, width: 60 }
         object_id: { label: ID, width: 70 }
-        name: { label: Name, width: 280, pin: true }
-        object_type: { label: Type, width: 70 }
-        required_skill_id:
-          label: Needs skill
-          labels: { "182": Herbalism, "186": Mining, "633": Lockpicking }
-        required_skill_rank: { label: Rank, width: 60 }

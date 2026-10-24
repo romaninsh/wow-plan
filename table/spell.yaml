@@ -1,14 +1,13 @@
 # yaml-language-server: $schema=./table-schema-1.json
-datasource: opendata
+datasource: wow
 title: Spells
-table: client_spells
+table: spells
 columns:
   - { name: spell_id, label: ID, type: int, flags: [id, searchable] }
-  - { name: name, label: Name, type: string, flags: [title, searchable] }
+  - { name: name, label: Spell, type: string, flags: [title, searchable] }
   - { name: rank, label: Rank, type: string }
   - { name: description, label: Description, type: string }
-  - { name: school, label: School, type: int }
+  - { name: school_name, label: School, type: string }
   - { name: spell_level, label: Level, type: int }
-  - { name: skill_id, label: Skill, type: int }
-  - { name: confidence, label: Confidence, type: string }
-  - { name: build_last_seen, label: Build, type: string }
+  - { name: cast_ms, label: Cast (ms), type: int }
+  - { name: skill_name, label: Skill, type: string }

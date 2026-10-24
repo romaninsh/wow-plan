@@ -1,30 +1,30 @@
-inventory_type,name,is_equippable
-0,Non-equippable,false
-1,Head,true
-2,Neck,true
-3,Shoulder,true
-4,Shirt,true
-5,Chest,true
-6,Waist,true
-7,Legs,true
-8,Feet,true
-9,Wrist,true
-10,Hands,true
-11,Finger,true
-12,Trinket,true
-13,One-Hand,true
-14,Off Hand,true
-15,Ranged,true
-16,Back,true
-17,Two-Hand,true
-18,Bag,false
-19,Tabard,true
-20,Chest,true
-21,Main Hand,true
-22,Off Hand,true
-23,Held In Off-hand,true
-24,Ammo,true
-25,Thrown,true
-26,Ranged,true
-27,Quiver,false
-28,Relic,true
+inventory_type,name,is_equippable,stat_budget_slot,armor_location_id
+0,Non-equippable,false,,
+1,Head,true,0,1
+2,Neck,true,2,
+3,Shoulder,true,1,3
+4,Shirt,true,,
+5,Chest,true,0,5
+6,Waist,true,1,6
+7,Legs,true,0,7
+8,Feet,true,1,8
+9,Wrist,true,2,9
+10,Hands,true,1,10
+11,Finger,true,2,
+12,Trinket,true,1,
+13,One-Hand,true,3,
+14,Off Hand,true,2,
+15,Ranged,true,3,
+16,Back,true,2,16
+17,Two-Hand,true,0,
+18,Bag,false,,
+19,Tabard,true,,
+20,Chest,true,0,5
+21,Main Hand,true,3,
+22,Off Hand,true,3,
+23,Held In Off-hand,true,2,
+24,Ammo,true,,
+25,Thrown,true,3,
+26,Ranged,true,3,
+27,Quiver,false,,
+28,Relic,true,4,

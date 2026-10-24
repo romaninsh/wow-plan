@@ -22,4 +22,4 @@ select
     u.count
 from unioned as u
 left join {{ ref('stg_opendata__quests') }} as q using (quest_id)
-left join {{ ref('stg_opendata__items') }} as i using (item_id)
+left join {{ ref('stg_wago__items') }} as i using (item_id)

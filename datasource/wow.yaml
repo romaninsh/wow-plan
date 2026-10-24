@@ -1,0 +1,6 @@
+# yaml-language-server: $schema=./datasource-schema-1.json
+type: postgres
+description: >
+  WoW Forever reference data for one client build (schema wow), rebuilt by the Import build
+  action from wago.tools and opendata. Read-only by convention: every import replaces it whole.
+url: postgres://wow:wow@postgres:5432/wow?sslmode=disable&options=-c%20search_path%3Dwow

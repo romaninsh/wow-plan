@@ -1,0 +1,71 @@
+stat_type_id,enum_name,column_name,label,tooltip_kind
+0,MANA,mana,Mana,base
+1,HEALTH,health,Health,base
+3,AGILITY,agility,Agility,base
+4,STRENGTH,strength,Strength,base
+5,INTELLECT,intellect,Intellect,base
+6,SPIRIT_UNUSED,spirit,Spirit,base
+7,STAMINA,stamina,Stamina,base
+12,DEFENSE_SKILL_RATING,defense_rating,Defense Rating,equip
+13,DODGE_RATING,dodge_rating,Dodge Rating,equip
+14,PARRY_RATING,parry_rating,Parry Rating,equip
+15,BLOCK_RATING,block_rating,Block Rating,equip
+31,HIT_RATING,hit_rating,Hit Rating,equip
+32,CRIT_RATING,crit_rating,Critical Strike Rating,equip
+36,HASTE_RATING,haste_rating,Haste Rating,equip
+37,EXPERTISE_RATING,expertise_rating,Expertise Rating,equip
+38,ATTACK_POWER,attack_power,Attack Power,equip
+39,RANGED_ATTACK_POWER,ranged_attack_power,Ranged Attack Power,equip
+41,SPELL_HEALING_DONE,healing,Healing,equip
+42,SPELL_DAMAGE_DONE,spell_damage,Spell Damage,equip
+43,MANA_REGENERATION,mana_regen,Mana per 5 sec.,equip
+45,SPELL_POWER,spell_power,Spell Power,equip
+46,HEALTH_REGEN,health_regen,Health per 5 sec.,equip
+47,SPELL_PENETRATION,spell_penetration,Spell Penetration,equip
+48,BLOCK_VALUE,block_value,Block Value,equip
+50,EXTRA_ARMOR,bonus_armor,Bonus Armor,base
+51,FIRE_RESISTANCE,fire_resistance,Fire Resistance,base
+52,FROST_RESISTANCE,frost_resistance,Frost Resistance,base
+53,HOLY_RESISTANCE,holy_resistance,Holy Resistance,base
+54,SHADOW_RESISTANCE,shadow_resistance,Shadow Resistance,base
+55,NATURE_RESISTANCE,nature_resistance,Nature Resistance,base
+56,ARCANE_RESISTANCE,arcane_resistance,Arcane Resistance,base
+83,PHYSICAL_DAMAGE_DONE,physical_damage,Physical Damage,equip
+84,HOLY_DAMAGE_DONE,holy_damage,Holy Spell Damage,equip
+85,FIRE_DAMAGE_DONE,fire_damage,Fire Spell Damage,equip
+86,NATURE_DAMAGE_DONE,nature_damage,Nature Spell Damage,equip
+87,FROST_DAMAGE_DONE,frost_damage,Frost Spell Damage,equip
+88,SHADOW_DAMAGE_DONE,shadow_damage,Shadow Spell Damage,equip
+89,ARCANE_DAMAGE_DONE,arcane_damage,Arcane Spell Damage,equip
+90,TWOHANDED_AXES_SKILL,two_handed_axes_skill,Two-Handed Axes Skill,equip
+91,TWOHANDED_MACES_SKILL,two_handed_maces_skill,Two-Handed Maces Skill,equip
+92,TWOHANDED_SWORDS_SKILL,two_handed_swords_skill,Two-Handed Swords Skill,equip
+93,AXES_SKILL,axes_skill,Axes Skill,equip
+94,BOWS_SKILL,bows_skill,Bows Skill,equip
+95,CROSSBOWS_SKILL,crossbows_skill,Crossbows Skill,equip
+96,DAGGERS_SKILL,daggers_skill,Daggers Skill,equip
+98,FIST_WEAPONS_SKILL,fist_weapons_skill,Fist Weapons Skill,equip
+99,GUNS_SKILL,guns_skill,Guns Skill,equip
+100,MACES_SKILL,maces_skill,Maces Skill,equip
+101,POLEARMS_SKILL,polearms_skill,Polearms Skill,equip
+102,STAVES_SKILL,staves_skill,Staves Skill,equip
+103,SWORDS_SKILL,swords_skill,Swords Skill,equip
+112,HERBALISM_SKILL,herbalism_skill,Herbalism,equip
+113,MINING_SKILL,mining_skill,Mining,equip
+114,SKINNING_SKILL,skinning_skill,Skinning,equip
+115,COOKING_SKILL,cooking_skill,Cooking,equip
+117,FISHING_SKILL,fishing_skill,Fishing,equip
+119,FIRE_PENETRATION,fire_penetration,Fire Penetration,equip
+121,FROST_PENETRATION,frost_penetration,Frost Penetration,equip
+124,SPELL_RESIST_ALL_SCHOOLS,all_resistance,All Resistances,base
+125,ATTACK_POWER_VS_HUMANOID,attack_power_vs_humanoid,Attack Power vs Humanoids,equip
+126,ATTACK_POWER_VS_ELEMENTAL,attack_power_vs_elemental,Attack Power vs Elementals,equip
+127,ATTACK_POWER_VS_DEMON,attack_power_vs_demon,Attack Power vs Demons,equip
+128,ATTACK_POWER_VS_UNDEAD,attack_power_vs_undead,Attack Power vs Undead,equip
+129,ATTACK_POWER_VS_DRAGONKIN,attack_power_vs_dragonkin,Attack Power vs Dragonkin,equip
+131,ATTACK_POWER_VS_BEAST,attack_power_vs_beast,Attack Power vs Beasts,equip
+132,ATTACK_POWER_VS_MECHANICAL,attack_power_vs_mechanical,Attack Power vs Mechanical,equip
+134,SPELL_DAMAGE_VS_ELEMENTAL,spell_damage_vs_elemental,Spell Damage vs Elementals,equip
+135,SPELL_DAMAGE_VS_DEMON,spell_damage_vs_demon,Spell Damage vs Demons,equip
+136,SPELL_DAMAGE_VS_UNDEAD,spell_damage_vs_undead,Spell Damage vs Undead,equip
+139,SPELL_DAMAGE_VS_BEAST,spell_damage_vs_beast,Spell Damage vs Beasts,equip

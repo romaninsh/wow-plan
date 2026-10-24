@@ -7,14 +7,14 @@ body:
     params:
       allow_add: false
       default_sort: { column: name, direction: asc }
+      filter: [creature_type_name, classification_name]
       columns:
-        npc_id: { label: ID, width: 70 }
         name: { label: Name, width: 240, pin: true }
         subname: { label: Title, width: 200 }
-        creature_type:
-          label: Type
-          labels: { "0": None, "1": Beast, "2": Dragonkin, "3": Demon, "4": Elemental, "5": Giant, "6": Undead, "7": Humanoid, "8": Critter, "9": Mechanical, "10": Not specified, "11": Totem }
-        classification:
+        creature_type_name: { label: Type, width: 110 }
+        classification_name:
           label: Rank
-          labels: { "0": Normal, "1": Elite, "2": Rare elite, "3": Boss, "4": Rare }
-          color: { yellow: ["1", "3"], blue: ["2", "4"] }
+          width: 100
+          color: { yellow: [Elite, Boss], blue: [Rare, Rare Elite] }
+        build_last_seen: { label: Seen in build, width: 110 }
+        npc_id: { label: ID, width: 70 }

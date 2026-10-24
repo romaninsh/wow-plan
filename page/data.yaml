@@ -1,0 +1,53 @@
+# yaml-language-server: $schema=./page-schema-1.json
+title: Data
+body:
+  - kind: row
+    children:
+      - kind: stat
+        observe: build_info
+        params: { label: Live build, column: build, icon: Database, color: blue }
+      - kind: stat
+        observe: build_info
+        params: { label: Tables fetched, column: fetched_at, icon: Download }
+      - kind: stat
+        observe: build_info
+        params: { label: Imported, column: imported_at, icon: RefreshCw }
+      - kind: stat
+        observe: item
+        params: { label: Items, icon: Gem }
+  - kind: row
+    children:
+      - kind: button
+        params:
+          label: "Fetch build"
+          icon: Download
+          # language=rhai
+          action: |
+            actions.fetch_build();
+      - kind: button
+        params:
+          label: "Import build"
+          icon: RefreshCw
+          style: primary
+          # language=rhai
+          action: |
+            actions.import_build();
+      - kind: button
+        params:
+          label: "Setup guide"
+          icon: Play
+          # language=rhai
+          action: |
+            actions.setup();
+  - kind: markdown
+    text: |
+      **Fetch build** downloads the game's data tables for a Forever client build from
+      wago.tools, with hotfixes merged, into `refs/wago/<build>/`. Files already there are kept.
+      To pick up newer hotfixes for a table, delete its file and fetch again.
+
+      **Import build** rebuilds this database from a fetched build: it transforms and tests the
+      data, then swaps the new tables in. If a test fails nothing changes and the terminal says
+      why. The previous build stays in schema `wow_prev` for one import.
+
+      Quests, NPCs and objects come from players' game caches (the opendata project) and only
+      cover what someone has seen so far.

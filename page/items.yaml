@@ -1,4 +1,7 @@
 # yaml-language-server: $schema=./page-schema-1.json
+# Stat, armor and DPS columns hold 0 when an item lacks the stat (so sorting works both ways);
+# `color: { muted: ["0"] }` fades those cells. (A `labels:` map must cover every value, or the
+# rest show "(??)", so there is no way to blank just the zeros.)
 title: Items
 body:
   - kind: binder
@@ -7,15 +10,39 @@ body:
     params:
       allow_add: false
       default_sort: { column: item_id, direction: asc }
-      filter: [quality, ">item_level", ">required_level"]
+      filter: [quality_name, slot_name, item_subclass_name, ">required_level", ">item_level"]
+      views: [item_tooltip]
       columns:
-        item_id: { label: ID, width: 70 }
-        name: { label: Name, width: 260, pin: true }
-        quality:
+        name: { label: Item, width: 240, pin: true }
+        quality_name:
           label: Quality
-          labels: { "0": Poor, "1": Common, "2": Uncommon, "3": Rare, "4": Epic, "5": Legendary, "6": Artifact, "7": Heirloom }
-          color: { muted: ["0"], green: ["2"], blue: ["3"], magenta: ["4"], yellow: ["5", "6", "7"] }
-        item_level: { label: iLvl, width: 60 }
-        required_level: { label: Req, width: 60 }
-        stats: { label: Stats, width: 220 }
-        sell_price: { label: Sell (copper) }
+          width: 90
+          color: { muted: [Poor], green: [Uncommon], blue: [Rare], magenta: [Epic], yellow: [Legendary, Artifact, Heirloom] }
+        item_level: { label: iLvl, width: 55 }
+        required_level: { label: Req, width: 55 }
+        slot_name: { label: Slot, width: 90 }
+        item_subclass_name: { label: Type, width: 110 }
+        armor: { label: Armor, width: 65, color: { muted: ["0"] } }
+        dps: { label: DPS, width: 60, color: { muted: ["0", "0.0"] } }
+        stamina: { label: Sta, width: 55, tooltip: Stamina, color: { muted: ["0"] } }
+        spirit: { label: Spi, width: 55, tooltip: Spirit, color: { muted: ["0"] } }
+        intellect: { label: Int, width: 55, tooltip: Intellect, color: { muted: ["0"] } }
+        agility: { label: Agi, width: 55, tooltip: Agility, color: { muted: ["0"] } }
+        strength: { label: Str, width: 55, tooltip: Strength, color: { muted: ["0"] } }
+        healing: { label: Heal, width: 55, tooltip: Healing, color: { muted: ["0"] } }
+        spell_damage: { label: SpDmg, width: 60, tooltip: Spell Damage, color: { muted: ["0"] } }
+        spell_power: { label: SP, width: 50, tooltip: Spell Power, color: { muted: ["0"] } }
+        attack_power: { label: AP, width: 50, tooltip: Attack Power, color: { muted: ["0"] } }
+        defense_rating: { label: Def, width: 50, tooltip: Defense Rating, color: { muted: ["0"] } }
+        crit_rating: { label: Crit, width: 50, tooltip: Critical Strike Rating, color: { muted: ["0"] } }
+        hit_rating: { label: Hit, width: 50, tooltip: Hit Rating, color: { muted: ["0"] } }
+        mana_regen: { label: Mp5, width: 50, tooltip: Mana per 5 sec., color: { muted: ["0"] } }
+        fire_resistance: { label: FR, width: 45, tooltip: Fire Resistance, color: { muted: ["0"] } }
+        frost_resistance: { label: FrR, width: 45, tooltip: Frost Resistance, color: { muted: ["0"] } }
+        shadow_resistance: { label: SR, width: 45, tooltip: Shadow Resistance, color: { muted: ["0"] } }
+        nature_resistance: { label: NR, width: 45, tooltip: Nature Resistance, color: { muted: ["0"] } }
+        arcane_resistance: { label: AR, width: 45, tooltip: Arcane Resistance, color: { muted: ["0"] } }
+        usable_by_classes: { label: Classes, width: 140 }
+        item_set_name: { label: Set, width: 160 }
+        sell_price_text: { label: Sells for, width: 90 }
+        item_id: { label: ID, width: 70 }

@@ -1,0 +1,67 @@
+# yaml-language-server: $schema=./view-schema-1.json
+# The first tab under the Items grid: the selected item laid out like the in-game tooltip.
+# Label colours are fixed text, so the name has one branch per quality.
+title: Tooltip
+table: item
+body:
+  - kind: row
+    gap: 24
+    children:
+      - kind: column
+        gap: 2
+        children:
+          - { kind: label, when: 'record.quality_name == "Poor"', text: "${record.name}", style: heading, color: "#9d9d9d" }
+          - { kind: label, when: 'record.quality_name == "Common"', text: "${record.name}", style: heading, color: foreground }
+          - { kind: label, when: 'record.quality_name == "Uncommon"', text: "${record.name}", style: heading, color: "#1eff00" }
+          - { kind: label, when: 'record.quality_name == "Rare"', text: "${record.name}", style: heading, color: "#0070dd" }
+          - { kind: label, when: 'record.quality_name == "Epic"', text: "${record.name}", style: heading, color: "#a335ee" }
+          - { kind: label, when: 'record.quality_name == "Legendary"', text: "${record.name}", style: heading, color: "#ff8000" }
+          - { kind: label, when: 'record.quality_name == "Artifact"', text: "${record.name}", style: heading, color: "#e6cc80" }
+          - { kind: label, when: 'record.quality_name == "Heirloom"', text: "${record.name}", style: heading, color: "#00ccff" }
+          - { kind: label, when: 'record.binding_name != () && record.binding_name != "None"', text: "${record.binding_name}" }
+          - { kind: label, when: 'record.binding_name == "Quest item"', text: "Quest Item" }
+          - kind: label
+            when: 'record.inventory_type != 0 && record.slot_name != ()'
+            text: "${record.slot_name}"
+            secondary: "${record.item_subclass_name}"
+          - { kind: label, when: 'record.armor > 0', text: "${record.armor} Armor" }
+          - kind: label
+            when: 'record.damage_min != ()'
+            text: "${record.damage_min} - ${record.damage_max} Damage"
+            secondary: "Speed ${record.weapon_speed_ms / 1000.0}"
+          - { kind: label, when: 'record.dps > 0', text: "(${record.dps} damage per second)" }
+          - kind: list
+            ref: stats
+            empty: ""
+            height: 18
+            item:
+              - { kind: label, when: 'row.tooltip_kind == "base" && row.value != () && row.value > 0', text: "+${row.value} ${row.label}" }
+          - { kind: label, when: 'record.item_set_name != ()', text: "Set: ${record.item_set_name}", color: yellow }
+          - { kind: label, when: 'record.usable_by_classes != ()', text: "Classes: ${record.usable_by_classes}" }
+          - { kind: label, when: 'record.required_skill_name != ()', text: "Requires ${record.required_skill_name} (${record.required_skill_rank})" }
+          - { kind: label, when: 'record.required_level > 0', text: "Requires Level ${record.required_level}" }
+          - { kind: label, text: "Item Level ${record.item_level}", color: yellow }
+          - kind: list
+            ref: stats
+            empty: ""
+            height: 18
+            item:
+              - { kind: label, when: 'row.tooltip_kind == "equip" && row.value != () && row.value > 0', text: "Equip: +${row.value} ${row.label}", color: green }
+          - kind: list
+            ref: spells
+            empty: ""
+            height: 18
+            item:
+              - { kind: label, when: 'row.trigger == "equip"', text: "Equip: ${row.spell_description}", color: green }
+              - { kind: label, when: 'row.trigger == "use"', text: "Use: ${row.spell_description}", color: green }
+              - { kind: label, when: 'row.trigger == "chance_on_hit"', text: "Chance on hit: ${row.spell_description}", color: green }
+              - { kind: label, when: 'row.trigger == "learn"', text: "Use: ${row.spell_description}", color: green }
+          - { kind: label, when: 'record.description != ()', text: '"${record.description}"', color: yellow }
+          - { kind: label, when: 'record.sell_price_text != ()', text: "Sell Price: ${record.sell_price_text}", style: muted }
+      - kind: column
+        gap: 6
+        children:
+          - { kind: stat, label: "Item ID", value: "${record.item_id}" }
+          - { kind: stat, label: "Class", value: "${record.item_class_name} / ${record.item_subclass_name}" }
+          - { kind: stat, label: "Build", value: "${record.build}" }
+          - { kind: label, text: "Stat values use opendata's budget formula; check them against the game.", style: muted }

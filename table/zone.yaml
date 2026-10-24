@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=./table-schema-1.json
+# Level range: min/max exploration level of the zone's sub-areas (level_source exploration),
+# replaced by seeds/ref_zone_levels.csv where that is wrong (level_source seed).
+datasource: wow
+title: Zones
+table: zones
+columns:
+  - { name: zone_id, label: ID, type: int, flags: [id, searchable] }
+  - { name: name, label: Zone, type: string, flags: [title, searchable] }
+  - { name: kind, label: Kind, type: string }
+  - { name: map_name, label: Continent / map, type: string }
+  - { name: min_level, label: Min level, type: int }
+  - { name: max_level, label: Max level, type: int }
+  - { name: level_source, label: Levels from, type: string }
+  - { name: level_note, label: Level note, type: string }
+  - { name: sub_area_count, label: Sub-areas, type: int }
+  - { name: quest_count, label: Quests seen, type: int }
+references:
+  areas: { table: area, kind: has_many, foreign_key: zone_id }
+  quests: { table: quest, kind: has_many, foreign_key: zone_id }

@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=./table-schema-1.json
+# One row per item and stat slot, with the budget inputs: value = round(budget_share x budget_points / 10000).
+datasource: wow
+title: Item stats
+table: item_stats
+columns:
+  - { name: item_stat_id, label: ID, type: string, flags: [id, hidden] }
+  - { name: item_id, label: Item ID, type: int }
+  - { name: item_name, label: Item, type: string }
+  - { name: slot, label: Slot, type: int }
+  - { name: stat_type_id, label: Stat type, type: int }
+  - { name: stat, label: Column, type: string }
+  - { name: label, label: Stat, type: string, flags: [title] }
+  - { name: tooltip_kind, label: Shown as, type: string }
+  - { name: value, label: Value, type: int }
+  - { name: budget_share, label: Budget share, type: int }
+  - { name: budget_points, label: Budget points, type: int }
+  - { name: item_level, label: Item level, type: int }

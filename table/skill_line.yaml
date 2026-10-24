@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=./table-schema-1.json
+datasource: wow
+title: Skills and professions
+table: skill_lines
+columns:
+  - { name: skill_line_id, label: ID, type: int, flags: [id, searchable] }
+  - { name: name, label: Skill, type: string, flags: [title, searchable] }
+  - { name: category, label: Category, type: string }
+  - { name: recipe_count, label: Recipes, type: int }
+  - { name: is_craft, label: Crafts, type: bool }
+  - { name: description, label: Description, type: string }
+references:
+  recipes: { table: recipe, kind: has_many, foreign_key: skill_line_id }

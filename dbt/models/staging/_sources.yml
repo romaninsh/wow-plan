@@ -1,46 +1,67 @@
 version: 2
 
 sources:
-  - name: opendata
-    description: >
-      Client-layer JSON Lines from github.com/wowlayerup-forever/opendata (cloned into refs/opendata).
-      One record per line, keyed by Blizzard ID, with provenance (source, build_first_seen,
-      build_last_seen, confidence). CC BY 4.0.
-    meta:
-      external_location: "read_json_auto('{{ var('opendata_dir') }}/{name}.jsonl', sample_size=-1)"
-    tables:
-      - name: items
-      - name: quests
-      - name: recipes
-      - name: npcs
-      - name: objects
-      - name: spells
-
   - name: wago
     description: >
-      DB2 tables exported as CSV from wago.tools for one client build (refs/wago/<build>/).
-      Column names are the DB2 field names; *_lang columns are enUS text.
+      DB2 tables exported as CSV from wago.tools for one client build, hotfixes merged
+      (refs/wago/<build>/, fetched by pipeline/pipeline.py fetch). Column names are the DB2 field
+      names; *_lang columns are enUS text. The list must match pipeline/wago_tables.txt.
     meta:
       external_location: "read_csv('{{ var('wago_dir') }}/{{ var('wago_build') }}/{name}.csv', header=true, sample_size=-1)"
     tables:
+      - name: Item
+      - name: ItemSparse
+      - name: ItemSearchName
+      - name: ItemEffect
+      - name: ItemXItemEffect
+      - name: ItemSet
+      - name: ItemClass
+      - name: ItemSubClass
+      - name: RandPropPoints
+      - name: ItemArmorQuality
+      - name: ItemArmorTotal
+      - name: ItemArmorShield
+      - name: ArmorLocation
+      - name: ItemDamageOneHand
+      - name: ItemDamageOneHandCaster
+      - name: ItemDamageTwoHand
+      - name: ItemDamageTwoHandCaster
+      - name: ItemDamageRanged
+      - name: ItemDamageThrown
+      - name: ItemDamageAmmo
+      - name: SpellName
+      - name: Spell
+      - name: SpellLevels
+      - name: SpellMisc
+      - name: SpellCastTimes
+      - name: SpellEffect
+      - name: SpellReagents
+      - name: SpellTotems
+      - name: SkillLineAbility
+      - name: SkillLine
       - name: AreaTable
       - name: Map
       - name: UiMap
       - name: UiMapAssignment
-      - name: WorldMapOverlay
-      - name: AreaTrigger
+      - name: LFGDungeons
+      - name: ContentTuning
       - name: TaxiNodes
       - name: TaxiPath
       - name: ChrClasses
       - name: ChrRaces
       - name: Faction
-      - name: FactionTemplate
-      - name: ItemClass
-      - name: ItemSubClass
-      - name: ItemSet
-      - name: SkillLine
       - name: QuestSort
       - name: QuestInfo
       - name: CreatureType
       - name: CreatureFamily
-      - name: Languages
+
+  - name: opendata
+    description: >
+      Client-cache JSON Lines from github.com/wowlayerup-forever/opendata (refs/opendata): quests,
+      creatures and game objects some player's client has seen. Not in DB2 on this engine. CC BY 4.0.
+    meta:
+      external_location: "read_json_auto('{{ var('opendata_dir') }}/{name}.jsonl', sample_size=-1)"
+    tables:
+      - name: quests
+      - name: npcs
+      - name: objects

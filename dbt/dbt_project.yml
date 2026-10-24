@@ -1,5 +1,5 @@
 name: wow_db
-version: "0.1.0"
+version: "0.2.0"
 config-version: 2
 profile: wow_db
 
@@ -12,29 +12,26 @@ target-path: "target"
 clean-targets: ["target", "dbt_packages"]
 
 vars:
-  # Raw inputs, relative to this folder. Bump wago_build after fetching a newer build into refs/wago/.
+  # Raw inputs, relative to this folder. The pipeline passes wago_build for the build it imports.
   opendata_dir: "../refs/opendata/data/client"
   wago_dir: "../refs/wago"
   wago_build: "1.60.1.70532"
 
 models:
   wow_db:
-    # Staging: one view per raw file, renamed and typed. Lives in data/wow.duckdb.
+    # Staging: one view per raw file, renamed and typed. DuckDB only.
     staging:
       +materialized: view
       +schema: staging
-    # Intermediate: joins and unnesting shared by several marts. Also in data/wow.duckdb.
+    # Intermediate: computed values and joins shared by several marts. DuckDB only.
     intermediate:
       +materialized: view
       +schema: intermediate
-    # Marts: the published data set. Built as tables in data/wow.duckdb, then copied into
-    # data/wow.sqlite by the publish_sqlite() hook at the end of every run.
+    # Marts: the published data set. Built as DuckDB tables, then copied into Postgres
+    # schema `wow` by `dbt run-operation publish_postgres` (pipeline/pipeline.py import).
     marts:
       +materialized: table
 
 seeds:
   wow_db:
     +schema: ref
-
-on-run-end:
-  - "{{ publish_sqlite() }}"

@@ -1,25 +1,119 @@
 # yaml-language-server: $schema=./table-schema-1.json
-datasource: opendata
+# Every named item of the imported build. Stat columns mirror seeds/ref_item_stat_types.csv:
+# add a column here when a row is added there.
+datasource: wow
 title: Items
-table: client_items
+table: items
 columns:
   - { name: item_id, label: ID, type: int, flags: [id, searchable] }
-  - { name: name, label: Name, type: string, flags: [title, searchable] }
+  - { name: name, label: Name, type: string, flags: [title, searchable, mandatory] }
   - { name: quality, label: Quality, type: int }
+  - { name: quality_name, label: Quality name, type: string }
   - { name: item_level, label: Item level, type: int }
-  - { name: required_level, label: Req. level, type: int }
-  - { name: item_class, label: Class, type: int }
-  - { name: item_subclass, label: Subclass, type: int }
-  - { name: inventory_type, label: Slot, type: int }
-  - { name: binding, label: Binding, type: int }
-  - { name: stackable, label: Stack, type: int }
-  - { name: stats, label: Stats, type: string }
+  - { name: required_level, label: Required level, type: int }
+  - { name: item_class_id, label: Class ID, type: int }
+  - { name: item_class_name, label: Class, type: string }
+  - { name: item_subclass_id, label: Subclass ID, type: int }
+  - { name: item_subclass_name, label: Type, type: string }
+  - { name: inventory_type, label: Slot ID, type: int }
+  - { name: slot_name, label: Slot, type: string }
+  - { name: armor_type, label: Armor type, type: string }
+  - { name: binding, label: Binding ID, type: int }
+  - { name: binding_name, label: Binding, type: string }
+  - { name: max_stack, label: Stack, type: int }
   - { name: armor, label: Armor, type: int }
-  - { name: damage, label: Damage, type: string }
-  - { name: spells, label: Spells, type: string }
-  - { name: sell_price, label: Sell price, type: int }
-  - { name: buy_price, label: Buy price, type: int }
-  - { name: set_id, label: Set, type: int }
+  - { name: damage_min, label: Damage min, type: int }
+  - { name: damage_max, label: Damage max, type: int }
+  - { name: weapon_speed_ms, label: Speed (ms), type: int }
+  - { name: dps, label: DPS, type: float }
+  - { name: mana, label: "Mana", type: int }
+  - { name: health, label: "Health", type: int }
+  - { name: agility, label: "Agility", type: int }
+  - { name: strength, label: "Strength", type: int }
+  - { name: intellect, label: "Intellect", type: int }
+  - { name: spirit, label: "Spirit", type: int }
+  - { name: stamina, label: "Stamina", type: int }
+  - { name: defense_rating, label: "Defense Rating", type: int }
+  - { name: dodge_rating, label: "Dodge Rating", type: int }
+  - { name: parry_rating, label: "Parry Rating", type: int }
+  - { name: block_rating, label: "Block Rating", type: int }
+  - { name: hit_rating, label: "Hit Rating", type: int }
+  - { name: crit_rating, label: "Critical Strike Rating", type: int }
+  - { name: haste_rating, label: "Haste Rating", type: int }
+  - { name: expertise_rating, label: "Expertise Rating", type: int }
+  - { name: attack_power, label: "Attack Power", type: int }
+  - { name: ranged_attack_power, label: "Ranged Attack Power", type: int }
+  - { name: healing, label: "Healing", type: int }
+  - { name: spell_damage, label: "Spell Damage", type: int }
+  - { name: mana_regen, label: "Mana per 5 sec.", type: int }
+  - { name: spell_power, label: "Spell Power", type: int }
+  - { name: health_regen, label: "Health per 5 sec.", type: int }
+  - { name: spell_penetration, label: "Spell Penetration", type: int }
+  - { name: block_value, label: "Block Value", type: int }
+  - { name: bonus_armor, label: "Bonus Armor", type: int }
+  - { name: fire_resistance, label: "Fire Resistance", type: int }
+  - { name: frost_resistance, label: "Frost Resistance", type: int }
+  - { name: holy_resistance, label: "Holy Resistance", type: int }
+  - { name: shadow_resistance, label: "Shadow Resistance", type: int }
+  - { name: nature_resistance, label: "Nature Resistance", type: int }
+  - { name: arcane_resistance, label: "Arcane Resistance", type: int }
+  - { name: physical_damage, label: "Physical Damage", type: int }
+  - { name: holy_damage, label: "Holy Spell Damage", type: int }
+  - { name: fire_damage, label: "Fire Spell Damage", type: int }
+  - { name: nature_damage, label: "Nature Spell Damage", type: int }
+  - { name: frost_damage, label: "Frost Spell Damage", type: int }
+  - { name: shadow_damage, label: "Shadow Spell Damage", type: int }
+  - { name: arcane_damage, label: "Arcane Spell Damage", type: int }
+  - { name: two_handed_axes_skill, label: "Two-Handed Axes Skill", type: int }
+  - { name: two_handed_maces_skill, label: "Two-Handed Maces Skill", type: int }
+  - { name: two_handed_swords_skill, label: "Two-Handed Swords Skill", type: int }
+  - { name: axes_skill, label: "Axes Skill", type: int }
+  - { name: bows_skill, label: "Bows Skill", type: int }
+  - { name: crossbows_skill, label: "Crossbows Skill", type: int }
+  - { name: daggers_skill, label: "Daggers Skill", type: int }
+  - { name: fist_weapons_skill, label: "Fist Weapons Skill", type: int }
+  - { name: guns_skill, label: "Guns Skill", type: int }
+  - { name: maces_skill, label: "Maces Skill", type: int }
+  - { name: polearms_skill, label: "Polearms Skill", type: int }
+  - { name: staves_skill, label: "Staves Skill", type: int }
+  - { name: swords_skill, label: "Swords Skill", type: int }
+  - { name: herbalism_skill, label: "Herbalism", type: int }
+  - { name: mining_skill, label: "Mining", type: int }
+  - { name: skinning_skill, label: "Skinning", type: int }
+  - { name: cooking_skill, label: "Cooking", type: int }
+  - { name: fishing_skill, label: "Fishing", type: int }
+  - { name: fire_penetration, label: "Fire Penetration", type: int }
+  - { name: frost_penetration, label: "Frost Penetration", type: int }
+  - { name: all_resistance, label: "All Resistances", type: int }
+  - { name: attack_power_vs_humanoid, label: "Attack Power vs Humanoids", type: int }
+  - { name: attack_power_vs_elemental, label: "Attack Power vs Elementals", type: int }
+  - { name: attack_power_vs_demon, label: "Attack Power vs Demons", type: int }
+  - { name: attack_power_vs_undead, label: "Attack Power vs Undead", type: int }
+  - { name: attack_power_vs_dragonkin, label: "Attack Power vs Dragonkin", type: int }
+  - { name: attack_power_vs_beast, label: "Attack Power vs Beasts", type: int }
+  - { name: attack_power_vs_mechanical, label: "Attack Power vs Mechanical", type: int }
+  - { name: spell_damage_vs_elemental, label: "Spell Damage vs Elementals", type: int }
+  - { name: spell_damage_vs_demon, label: "Spell Damage vs Demons", type: int }
+  - { name: spell_damage_vs_undead, label: "Spell Damage vs Undead", type: int }
+  - { name: spell_damage_vs_beast, label: "Spell Damage vs Beasts", type: int }
+  - { name: usable_by_classes, label: Classes, type: string }
+  - { name: required_skill_name, label: Required skill, type: string }
+  - { name: required_skill_rank, label: Required skill rank, type: int }
+  - name: item_set_id
+    label: Set
+    type: int
+    references: { table: item_set, kind: has_one, name: item_set }
+  - { name: item_set_name, label: Set name, type: string }
+  - { name: starts_quest_id, label: Starts quest, type: int }
+  - { name: sell_price_copper, label: Sell price (copper), type: int }
+  - { name: sell_price_text, label: Sell price, type: string }
+  - { name: buy_price_copper, label: Buy price (copper), type: int }
   - { name: description, label: Description, type: string }
-  - { name: confidence, label: Confidence, type: string }
-  - { name: build_last_seen, label: Build, type: string }
+  - { name: build, label: Build, type: string }
+references:
+  spells: { table: item_spell, kind: has_many, foreign_key: item_id }
+  stats: { table: item_stat, kind: has_many, foreign_key: item_id }
+  made_by: { table: recipe, kind: has_many, foreign_key: creates_item_id }
+  used_in: { table: recipe_reagent, kind: has_many, foreign_key: item_id }
+  teaches: { table: recipe, kind: has_many, foreign_key: taught_by_item_id }
+  quests: { table: quest_item, kind: has_many, foreign_key: item_id }

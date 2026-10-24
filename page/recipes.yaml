@@ -6,16 +6,21 @@ body:
     observe: recipe
     params:
       allow_add: false
-      default_sort: { column: skill_required, direction: asc }
-      filter: [skill_id, ">skill_required"]
+      default_sort: { column: skill_green, direction: asc }
+      filter: [profession_name, ">skill_green", ">creates_item_required_level"]
       columns:
+        name: { label: Recipe, width: 240, pin: true }
+        profession_name: { label: Profession, width: 120 }
+        skill_green: { label: Green at, width: 70, color: { green: [">0"] } }
+        skill_gray: { label: Gray at, width: 65, color: { muted: [">0"] } }
+        creates_item_name: { label: Creates, width: 200 }
+        creates_item_quality:
+          label: Quality
+          width: 80
+          labels: { "0": Poor, "1": Common, "2": Uncommon, "3": Rare, "4": Epic, "5": Legendary, "6": Artifact, "7": Heirloom }
+          color: { muted: ["0"], green: ["2"], blue: ["3"], magenta: ["4"], yellow: ["5", "6", "7"] }
+        creates_item_required_level: { label: Use level, width: 70 }
+        creates_count: { label: Makes, width: 55 }
+        reagent_count: { label: Reagents, width: 70 }
+        taught_by_item_name: { label: Taught by, width: 200 }
         recipe_spell_id: { label: ID, width: 70 }
-        name: { label: Recipe, width: 260, pin: true }
-        skill_id:
-          label: Profession
-          labels: { "40": Poisons, "129": First Aid, "164": Blacksmithing, "165": Leatherworking, "171": Alchemy, "185": Cooking, "186": Mining, "197": Tailoring, "202": Engineering, "333": Enchanting, "393": Skinning }
-        skill_required: { label: Skill, width: 60 }
-        skill_green: { label: Green, width: 60, color: { green: [">0"] } }
-        skill_gray: { label: Gray, width: 60, color: { muted: [">0"] } }
-        creates: { label: Creates, width: 160 }
-        reagents: { label: Reagents, width: 300 }

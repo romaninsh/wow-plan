@@ -1,20 +1,26 @@
 version: 2
 
-# Published tables. Each is copied into data/wow.sqlite at the end of a run (macros/publish_sqlite.sql);
-# meta.sqlite_primary_key becomes a UNIQUE index there, meta.sqlite_indexes plain indexes.
+# Published tables, copied into Postgres schema `wow` by macros/publish_postgres.sql.
+# meta.pg_primary_key becomes the PRIMARY KEY, meta.pg_indexes plain B-tree indexes.
+# Tests between wago tables block the import; tests that cross from opendata (player caches of
+# other builds) into wago data are severity: warn, since some links are expected to dangle.
 
 models:
-  # ── world ────────────────────────────────────────────────────────────────
+  - name: build_info
+    description: One row about the live import - build, product, when its tables were fetched, opendata commit, row counts.
+    config: { meta: { pg_primary_key: build } }
+
+  # world
   - name: maps
-    description: Continents, dungeons, raids and battlegrounds (Map.db2).
-    config: { meta: { sqlite_primary_key:map_id } }
+    description: Continents, dungeons, raids and battlegrounds (Map).
+    config: { meta: { pg_primary_key: map_id } }
     columns:
       - name: map_id
         data_tests: [unique, not_null]
 
   - name: areas
-    description: Every named place (AreaTable.db2) with its parent, top-level zone and map.
-    config: { meta: { sqlite_primary_key:area_id, sqlite_indexes: [zone_id, parent_area_id, map_id] } }
+    description: Every named place (AreaTable) with its parent, top-level zone and map.
+    config: { meta: { pg_primary_key: area_id, pg_indexes: [name, zone_id, parent_area_id, map_id] } }
     columns:
       - name: area_id
         data_tests: [unique, not_null]
@@ -23,129 +29,167 @@ models:
         data_tests: [not_null]
 
   - name: zones
-    description: Top-level areas (zones, cities, instances) with sub-area and quest counts.
-    config: { meta: { sqlite_primary_key:zone_id, sqlite_indexes: [map_id] } }
+    description: Top-level areas with a level range (from sub-area exploration levels or the seed) and counts.
+    config: { meta: { pg_primary_key: zone_id, pg_indexes: [name, map_id, min_level, max_level] } }
     columns:
       - name: zone_id
         data_tests: [unique, not_null]
+      - name: level_source
+        data_tests:
+          - accepted_values: { arguments: { values: [seed, exploration] } }
+
+  - name: dungeons
+    description: Dungeons and raids (LFGDungeons) with a seeded level range.
+    config: { meta: { pg_primary_key: lfg_dungeon_id, pg_indexes: [name, map_id, min_level] } }
+    columns:
+      - name: lfg_dungeon_id
+        data_tests: [unique, not_null]
 
   - name: taxi_nodes
-    description: Flight masters (TaxiNodes.db2), world coordinates.
-    config: { meta: { sqlite_primary_key:taxi_node_id, sqlite_indexes: [map_id] } }
+    description: Flight masters (TaxiNodes), world coordinates.
+    config: { meta: { pg_primary_key: taxi_node_id, pg_indexes: [map_id] } }
     columns:
       - name: taxi_node_id
         data_tests: [unique, not_null]
 
   - name: taxi_paths
     description: Direct flight legs between two flight masters, with the cost.
-    config: { meta: { sqlite_primary_key:taxi_path_id, sqlite_indexes: [from_taxi_node_id, to_taxi_node_id] } }
+    config: { meta: { pg_primary_key: taxi_path_id, pg_indexes: [from_taxi_node_id, to_taxi_node_id] } }
     columns:
       - name: taxi_path_id
         data_tests: [unique, not_null]
 
-  # ── reference ────────────────────────────────────────────────────────────
+  # reference
   - name: classes
-    description: Playable classes (ChrClasses.db2) and their bit in allowable_class_mask.
-    config: { meta: { sqlite_primary_key:class_id } }
+    description: Playable classes (ChrClasses) and their bit in allowable_class_mask.
+    config: { meta: { pg_primary_key: class_id } }
     columns:
       - name: class_id
         data_tests: [unique, not_null]
 
   - name: races
-    description: Races (ChrRaces.db2), playable and NPC, and their bit in allowable_race_mask.
-    config: { meta: { sqlite_primary_key:race_id } }
+    description: Races (ChrRaces), playable and NPC, and their bit in allowable_race_mask.
+    config: { meta: { pg_primary_key: race_id } }
     columns:
       - name: race_id
         data_tests: [unique, not_null]
 
   - name: factions
-    description: Reputation factions and faction groups (Faction.db2).
-    config: { meta: { sqlite_primary_key:faction_id, sqlite_indexes: [parent_faction_id] } }
+    description: Reputation factions and faction groups (Faction).
+    config: { meta: { pg_primary_key: faction_id, pg_indexes: [name, parent_faction_id] } }
     columns:
       - name: faction_id
         data_tests: [unique, not_null]
 
   - name: skill_lines
-    description: Professions, secondary skills, weapon and armor skills, class trees (SkillLine.db2).
-    config: { meta: { sqlite_primary_key:skill_line_id, sqlite_indexes: [category_id] } }
+    description: Professions, secondary skills, weapon and armor skills, class trees (SkillLine).
+    config: { meta: { pg_primary_key: skill_line_id, pg_indexes: [category_id, name] } }
     columns:
       - name: skill_line_id
         data_tests: [unique, not_null]
 
+  - name: profession_ranks
+    description: Trainer ranks (Apprentice to Artisan) with skill bounds and required character level (seed).
+    config: { meta: { pg_primary_key: rank } }
+
   - name: item_sets
-    description: Named item sets (ItemSet.db2); item_ids is a JSON array.
-    config: { meta: { sqlite_primary_key:item_set_id } }
+    description: Named item sets (ItemSet); item_ids is a JSON array.
+    config: { meta: { pg_primary_key: item_set_id, pg_indexes: [name] } }
     columns:
       - name: item_set_id
         data_tests: [unique, not_null]
 
   - name: item_subclasses
-    description: Item subclass names per item class (ItemSubClass.db2). item_subclass_key = class * 100 + subclass.
-    config: { meta: { sqlite_primary_key:item_subclass_key, sqlite_indexes: [item_class_id] } }
+    description: Item subclass names per item class. item_subclass_key = class * 100 + subclass.
+    config: { meta: { pg_primary_key: item_subclass_key, pg_indexes: [item_class_id] } }
     columns:
       - name: item_subclass_key
         data_tests: [unique, not_null]
 
-  # ── catalog ──────────────────────────────────────────────────────────────
+  # catalog
   - name: items
     description: >
-      Items with class, slot, quality, binding and set resolved to names. Stats, damage and armor are
-      computed by the opendata extractor; spot-check before relying on them. has_details is false for
-      stub rows the client only knows the class and slot of.
-    config: { meta: { sqlite_primary_key:item_id, sqlite_indexes: [name, quality, item_level, required_level, item_class_id, inventory_type, item_set_id] } }
+      Every named item of the build (ItemSparse with hotfixes): class, slot, quality, binding, set,
+      computed armor and weapon damage, and one column per stat type (seeds/ref_item_stat_types.csv).
+      Stats use opendata's budget formula; spot-check them against in-game tooltips.
+    config:
+      meta:
+        pg_primary_key: item_id
+        pg_indexes: [name, quality, item_level, required_level, item_class_id, item_subclass_id, inventory_type,
+                     item_set_id, stamina, spirit, intellect, agility, strength, armor, healing, spell_damage,
+                     spell_power, attack_power]
     columns:
       - name: item_id
         data_tests: [unique, not_null]
+      - name: name
+        data_tests: [not_null]
       - name: item_set_id
         data_tests:
           - relationships: { arguments: { to: ref('item_sets'), field: item_set_id } }
 
   - name: item_stats
-    description: One row per item and stat (long form of items.stats).
-    config: { meta: { sqlite_primary_key:item_stat_id, sqlite_indexes: [item_id, stat] } }
+    description: One row per item and stat slot, with the budget inputs (value = round(budget_share x budget_points / 10000)).
+    config: { meta: { pg_primary_key: item_stat_id, pg_indexes: [item_id, stat, stat_type_id] } }
     columns:
       - name: item_stat_id
         data_tests: [unique, not_null]
 
+  - name: item_spells
+    description: Spells an item casts or grants (Use, Equip, Chance on hit, Learn), with the spell text.
+    config: { meta: { pg_primary_key: item_spell_id, pg_indexes: [item_id, spell_id] } }
+    columns:
+      - name: item_spell_id
+        data_tests: [unique, not_null]
+
   - name: quests
     description: >
-      Quests from the client cache (only those some player has seen). zone_id is set for zone quests,
-      quest_sort_id for category quests (class, profession, seasonal).
-    config: { meta: { sqlite_primary_key:quest_id, sqlite_indexes: [zone_id, quest_sort_id, quest_level, min_level] } }
+      Quests from players' client caches (opendata; only those someone has seen). zone_id is set for zone
+      quests, quest_sort_id for category quests (class, profession, seasonal).
+    config: { meta: { pg_primary_key: quest_id, pg_indexes: [name, zone_id, quest_sort_id, quest_level, min_level] } }
     columns:
       - name: quest_id
         data_tests: [unique, not_null]
       - name: zone_id
         data_tests:
-          - relationships: { arguments: { to: ref('areas'), field: area_id } }
+          - relationships: { arguments: { to: ref('areas'), field: area_id }, config: { severity: warn } }
 
   - name: quest_items
     description: Items a quest asks for (objective) or gives (reward, choice).
-    config: { meta: { sqlite_primary_key:quest_item_id, sqlite_indexes: [quest_id, item_id] } }
+    config: { meta: { pg_primary_key: quest_item_id, pg_indexes: [quest_id, item_id] } }
     columns:
       - name: quest_item_id
         data_tests: [unique, not_null]
       - name: role
         data_tests:
           - accepted_values: { arguments: { values: [objective, reward, choice] } }
+      - name: item_id
+        data_tests:
+          - relationships: { arguments: { to: ref('items'), field: item_id }, config: { severity: warn } }
 
   - name: quest_npcs
     description: Creatures a quest asks you to kill or interact with.
-    config: { meta: { sqlite_primary_key:quest_npc_id, sqlite_indexes: [quest_id, npc_id] } }
+    config: { meta: { pg_primary_key: quest_npc_id, pg_indexes: [quest_id, npc_id] } }
     columns:
       - name: quest_npc_id
         data_tests: [unique, not_null]
 
   - name: quest_reputation
     description: Reputation a quest awards, per faction.
-    config: { meta: { sqlite_primary_key:quest_reputation_id, sqlite_indexes: [quest_id, faction_id] } }
+    config: { meta: { pg_primary_key: quest_reputation_id, pg_indexes: [quest_id, faction_id] } }
     columns:
       - name: quest_reputation_id
         data_tests: [unique, not_null]
+      - name: faction_id
+        data_tests:
+          - relationships: { arguments: { to: ref('factions'), field: faction_id }, config: { severity: warn } }
 
   - name: recipes
-    description: Crafting recipes with profession, skill thresholds (no yellow) and the item made.
-    config: { meta: { sqlite_primary_key:recipe_spell_id, sqlite_indexes: [skill_line_id, skill_required, creates_item_id] } }
+    description: >
+      Crafting recipes (SkillLineAbility + SpellEffect + SpellReagents) with profession, thresholds and what
+      it makes. skill_required is the client's minimum rank (usually 1); the skill a trainer asks for before
+      teaching a recipe is server-side and not in client data. skill_green / skill_gray are the client's
+      skill-up thresholds; yellow is not published.
+    config: { meta: { pg_primary_key: recipe_spell_id, pg_indexes: [name, skill_line_id, skill_required, creates_item_id, taught_by_item_id] } }
     columns:
       - name: recipe_spell_id
         data_tests: [unique, not_null]
@@ -155,31 +199,31 @@ models:
 
   - name: recipe_reagents
     description: One row per recipe and reagent.
-    config: { meta: { sqlite_primary_key:recipe_reagent_id, sqlite_indexes: [recipe_spell_id, item_id] } }
+    config: { meta: { pg_primary_key: recipe_reagent_id, pg_indexes: [recipe_spell_id, item_id] } }
     columns:
       - name: recipe_reagent_id
         data_tests: [unique, not_null]
       - name: item_id
         data_tests:
-          - relationships: { arguments: { to: ref('items'), field: item_id } }
+          - relationships: { arguments: { to: ref('items'), field: item_id }, config: { severity: warn } }
 
   - name: npcs
-    description: Creatures from the client cache (only those some player has seen).
-    config: { meta: { sqlite_primary_key:npc_id, sqlite_indexes: [name] } }
+    description: Creatures from players' client caches (opendata; only those someone has seen).
+    config: { meta: { pg_primary_key: npc_id, pg_indexes: [name] } }
     columns:
       - name: npc_id
         data_tests: [unique, not_null]
 
   - name: game_objects
-    description: Game objects (chests, herbs, ore, doors, quest objects) from the client cache.
-    config: { meta: { sqlite_primary_key:object_id, sqlite_indexes: [name, required_skill_line_id] } }
+    description: Game objects (chests, herbs, ore, doors, quest objects) from players' client caches (opendata).
+    config: { meta: { pg_primary_key: object_id, pg_indexes: [name, required_skill_line_id] } }
     columns:
       - name: object_id
         data_tests: [unique, not_null]
 
   - name: spells
-    description: Spells (SpellName and friends), with school and skill resolved.
-    config: { meta: { sqlite_primary_key:spell_id, sqlite_indexes: [name, skill_line_id] } }
+    description: Spells (SpellName, Spell, SpellMisc, SpellLevels) with school and skill resolved.
+    config: { meta: { pg_primary_key: spell_id, pg_indexes: [name, skill_line_id] } }
     columns:
       - name: spell_id
         data_tests: [unique, not_null]

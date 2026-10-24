@@ -3,5 +3,7 @@ wow_db:
   outputs:
     dev:
       type: duckdb
-      path: ../data/wow.duckdb
+      # Working database for the transforms. In the pipeline container this is scratch
+      # (WOW_DUCKDB_PATH=/tmp/wow/wow.duckdb); on the host it stays in data/ for analysis.
+      path: "{{ env_var('WOW_DUCKDB_PATH', '../data/wow.duckdb') }}"
       threads: 4

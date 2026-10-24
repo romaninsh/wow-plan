@@ -38,6 +38,9 @@ dbt/logs/
 dbt/dbt_packages/
 dbt/.user.yml
 
+# Agent notes for the Vantage authors; Vantage sends and deletes it
+FEEDBACK.md
+
 # Scratch: temporary files, brainstorming mockups
 tmp/
 scratch/

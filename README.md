@@ -10,12 +10,19 @@ Game data and leveling guides for World of Warcraft: Forever.
 - **API and MCP (planned).** Read-only access to the reference data and access to guides, for
   the wow-plan.com web client and for AI agents.
 
+![The Vantage admin: items of the Embrace of the Viper set, with level, slot, armor and stat columns](docs/images/admin-item-set.png)
+
+*The Vantage admin, opened on the items of one item set. Every stat is a sortable column;
+selecting an item shows it as an in-game style tooltip.*
+
 ## Layout
 
 | Path | What |
 |---|---|
-| `datasource/` `table/` `page/` `menu/` `action/` | the Vantage admin app: browse and check the data |
+| `datasource/` `table/` `page/` `menu/` `action/` `view/` | the Vantage admin app: browse and check the data |
+| `pipeline/` | fetch and import: downloads a build's tables, runs dbt, publishes to Postgres |
 | `dbt/` | dbt project that turns downloaded tables into the published data set ([README](dbt/README.md)) |
+| `docs/` | designs |
 | `seeds/` | our own data for facts no source publishes ([README](seeds/README.md)) |
 | `agents/` | notes for AI agents working on this repo (`BRIEF.md`) |
 | `composer.yaml` | local services Vantage starts |
@@ -33,7 +40,14 @@ trademarks of Blizzard Entertainment; this is a fan project, not affiliated with
 
 ## Building the data
 
+Open the project in Vantage, start the services, then on the **Data** page press **Fetch build**
+and **Import build** (or run the **Setup guide**). Both run in the `pipeline` container, so
+nothing needs installing. From a terminal:
+
 ```bash
-python3 -m venv .venv && .venv/bin/pip install dbt-duckdb
-./dbt/run.sh build
+python3 pipeline/pipeline.py fetch      # newest Forever build's tables from wago.tools
+python3 pipeline/pipeline.py import     # dbt build, then publish to Postgres schema wow
 ```
+
+`import` on the host needs `.venv` (`python3 -m venv .venv && .venv/bin/pip install dbt-duckdb`).
+Details: [dbt/README.md](dbt/README.md).

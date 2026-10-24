@@ -1,0 +1,9 @@
+# yaml-language-server: $schema=./table-schema-1.json
+datasource: wow
+title: Races
+table: races
+columns:
+  - { name: race_id, label: ID, type: int, flags: [id] }
+  - { name: name, label: Race, type: string, flags: [title, searchable] }
+  - { name: race_mask, label: Mask bit, type: int }
+  - { name: description, label: Description, type: string }

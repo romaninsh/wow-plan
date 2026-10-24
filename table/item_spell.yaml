@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=./table-schema-1.json
+datasource: wow
+title: Item spells
+table: item_spells
+columns:
+  - { name: item_spell_id, label: ID, type: string, flags: [id, hidden] }
+  - { name: item_id, label: Item ID, type: int }
+  - { name: item_name, label: Item, type: string }
+  - { name: trigger, label: Trigger, type: string }
+  - { name: spell_id, label: Spell ID, type: int }
+  - { name: spell_name, label: Spell, type: string, flags: [title] }
+  - { name: spell_description, label: Effect, type: string }
+  - { name: charges, label: Charges, type: int }
+  - { name: cooldown_ms, label: Cooldown (ms), type: int }
+  - { name: slot_index, label: Slot, type: int }

@@ -1,0 +1,10 @@
+# yaml-language-server: $schema=./table-schema-1.json
+datasource: wow
+title: Imported build
+table: build_info
+columns:
+  - { name: build, label: Build, type: string, flags: [id, title] }
+  - { name: product, label: Product, type: string }
+  - { name: fetched_at, label: Tables fetched, type: string }
+  - { name: imported_at, label: Imported, type: string }
+  - { name: opendata_commit, label: opendata commit, type: string }

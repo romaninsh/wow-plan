@@ -1,0 +1,47 @@
+# yaml-language-server: $schema=./page-schema-1.json
+title: Classes, races, factions
+body:
+  - kind: row
+    children:
+      - kind: column
+        frame: true
+        children:
+          - kind: label
+            params: { text: "Classes", style: heading, icon: Shield }
+          - kind: grid
+            observe: class
+            height: 300
+            params:
+              default_sort: { column: class_id, direction: asc }
+              columns:
+                name: { label: Class, width: 120 }
+                class_mask: { label: Mask bit, width: 80 }
+                class_id: { label: ID, width: 60 }
+      - kind: column
+        frame: true
+        children:
+          - kind: label
+            params: { text: "Races", style: heading, icon: Users }
+          - kind: grid
+            observe: race
+            height: 300
+            params:
+              search: true
+              default_sort: { column: race_id, direction: asc }
+              columns:
+                name: { label: Race, width: 160 }
+                race_mask: { label: Mask bit, width: 90 }
+                race_id: { label: ID, width: 60 }
+  - kind: binder
+    name: factions
+    observe: faction
+    params:
+      allow_add: false
+      default_sort: { column: name, direction: asc }
+      filter: [parent_name, has_reputation]
+      columns:
+        name: { label: Faction, width: 240, pin: true }
+        parent_name: { label: Group, width: 180 }
+        has_reputation: { label: Reputation, width: 90 }
+        description: { label: Description, width: 380 }
+        faction_id: { label: ID, width: 70 }

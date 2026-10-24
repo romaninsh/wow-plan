@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=./table-schema-1.json
+# Level ranges come from seeds/ref_dungeon_levels.csv (level_source says where each came from).
+datasource: wow
+title: Dungeons
+table: dungeons
+columns:
+  - { name: lfg_dungeon_id, label: ID, type: int, flags: [id, searchable] }
+  - { name: name, label: Dungeon, type: string, flags: [title, searchable] }
+  - { name: kind, label: Kind, type: string }
+  - { name: map_name, label: Map, type: string }
+  - { name: max_players, label: Players, type: int }
+  - { name: min_level, label: Min level, type: int }
+  - { name: max_level, label: Max level, type: int }
+  - { name: level_source, label: Levels from, type: string }
+  - { name: tuning_min_level, label: Client tuning level, type: int }

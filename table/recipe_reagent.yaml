@@ -1,0 +1,11 @@
+# yaml-language-server: $schema=./table-schema-1.json
+datasource: wow
+title: Recipe reagents
+table: recipe_reagents
+columns:
+  - { name: recipe_reagent_id, label: ID, type: string, flags: [id, hidden] }
+  - { name: recipe_spell_id, label: Recipe ID, type: int }
+  - { name: recipe_name, label: Recipe, type: string, flags: [title] }
+  - { name: item_id, label: Reagent ID, type: int }
+  - { name: item_name, label: Reagent, type: string }
+  - { name: count, label: Count, type: int }

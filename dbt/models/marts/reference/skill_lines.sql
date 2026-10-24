@@ -2,7 +2,7 @@
 -- them with riding, racials and lockpicking), weapon skills, class spell trees.
 with recipe_counts as (
     select skill_line_id, count(*) as recipe_count
-    from {{ ref('stg_opendata__recipes') }}
+    from {{ ref('int_recipes') }}
     group by skill_line_id
 )
 

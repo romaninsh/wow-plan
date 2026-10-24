@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=./table-schema-1.json
+datasource: wow
+title: Areas
+table: areas
+columns:
+  - { name: area_id, label: ID, type: int, flags: [id, searchable] }
+  - { name: name, label: Area, type: string, flags: [title, searchable] }
+  - { name: parent_name, label: Inside, type: string }
+  - { name: zone_id, label: Zone ID, type: int }
+  - { name: zone_name, label: Zone, type: string }
+  - { name: depth, label: Depth, type: int }
+  - { name: map_name, label: Map, type: string }
+  - { name: exploration_level, label: Exploration level, type: int }

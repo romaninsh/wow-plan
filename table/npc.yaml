@@ -1,16 +1,13 @@
 # yaml-language-server: $schema=./table-schema-1.json
-datasource: opendata
+# Creatures from players' client caches (opendata): only those someone has seen so far.
+datasource: wow
 title: NPCs
-table: client_npcs
+table: npcs
 columns:
   - { name: npc_id, label: ID, type: int, flags: [id, searchable] }
   - { name: name, label: Name, type: string, flags: [title, searchable] }
   - { name: subname, label: Title, type: string, flags: [searchable] }
-  - { name: min_level, label: Min level, type: int }
-  - { name: max_level, label: Max level, type: int }
-  - { name: creature_type, label: Type, type: int }
-  - { name: classification, label: Classification, type: int }
-  - { name: faction_id, label: Faction, type: int }
-  - { name: display_ids, label: Display IDs, type: string }
+  - { name: creature_type_name, label: Type, type: string }
+  - { name: classification_name, label: Rank, type: string }
   - { name: confidence, label: Confidence, type: string }
-  - { name: build_last_seen, label: Build, type: string }
+  - { name: build_last_seen, label: Seen in build, type: string }

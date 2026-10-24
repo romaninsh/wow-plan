@@ -1,0 +1,11 @@
+# yaml-language-server: $schema=./table-schema-1.json
+datasource: wow
+title: Quest kill targets
+table: quest_npcs
+columns:
+  - { name: quest_npc_id, label: ID, type: string, flags: [id, hidden] }
+  - { name: quest_id, label: Quest ID, type: int }
+  - { name: quest_name, label: Quest, type: string, flags: [title] }
+  - { name: npc_id, label: NPC ID, type: int }
+  - { name: npc_name, label: NPC, type: string }
+  - { name: count, label: Count, type: int }

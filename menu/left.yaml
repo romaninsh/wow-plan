@@ -1,21 +1,48 @@
 # yaml-language-server: $schema=./menu-schema-1.json
-title: WoW Forever DB
+title: wow-plan admin
 items:
   - page: items
     label: Items
     icon: Gem
-  - page: quests
-    label: Quests
-    icon: BookOpen
-  - page: recipes
-    label: Recipes
-    icon: Hammer
-  - page: npcs
-    label: NPCs
-    icon: Users
-  - page: objects
-    label: Objects
-    icon: Box
-  - page: spells
-    label: Spells
-    icon: Sparkles
+  - section: World
+    children:
+      - page: zones
+        label: Zones
+        icon: Map
+      - page: dungeons
+        label: Dungeons
+        icon: Landmark
+  - section: Quests
+    children:
+      - page: quests
+        label: Quests
+        icon: BookOpen
+      - page: npcs
+        label: NPCs
+        icon: Users
+      - page: objects
+        label: Objects
+        icon: Box
+  - section: Crafting
+    children:
+      - page: recipes
+        label: Recipes
+        icon: Hammer
+      - page: skills
+        label: Skills and professions
+        icon: GraduationCap
+  - section: Reference
+    children:
+      - page: spells
+        label: Spells
+        icon: Sparkles
+      - page: item_sets
+        label: Item sets
+        icon: Layers
+      - page: reference
+        label: Classes, races, factions
+        icon: Shield
+  - divider: true
+  - page: data
+    label: Data
+    icon: Database

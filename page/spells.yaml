@@ -7,13 +7,15 @@ body:
     params:
       allow_add: false
       default_sort: { column: spell_id, direction: asc }
+      filter: [school_name, skill_name, ">spell_level"]
       columns:
-        spell_id: { label: ID, width: 70 }
         name: { label: Spell, width: 240, pin: true }
         rank: { label: Rank, width: 80 }
-        school:
+        school_name:
           label: School
-          labels: { "1": Physical, "2": Holy, "4": Fire, "8": Nature, "16": Frost, "32": Shadow, "64": Arcane }
-          color: { yellow: ["2"], red: ["4"], green: ["8"], cyan: ["16"], magenta: ["32", "64"] }
+          width: 90
+          color: { yellow: [Holy], red: [Fire], green: [Nature], cyan: [Frost], magenta: [Shadow, Arcane] }
         spell_level: { label: Level, width: 60 }
-        description: { label: Description, width: 480 }
+        skill_name: { label: Skill, width: 130 }
+        description: { label: Description, width: 460 }
+        spell_id: { label: ID, width: 70 }

@@ -1,35 +1,94 @@
 version: 2
 
-# Game constants the client keeps in code, not in DB2 tables. Typed in by hand (opendata
-# source.kind "manual"); check them against the client's Lua enums when a build changes them.
+# Our own data: facts no fetched table publishes. Each seed says where its values came from.
 seeds:
   - name: ref_item_qualities
-    description: Item quality (rarity) id to name and the tooltip colour.
+    description: Item quality (rarity) id to name and tooltip colour. Client constants.
     columns:
       - name: quality
         data_tests: [unique, not_null]
+
   - name: ref_inventory_types
-    description: Item inventory type (equipment slot) id to slot name.
+    description: >
+      Item inventory type (equipment slot) to slot name, the RandPropPoints budget column the slot
+      uses (stat_budget_slot 0-4) and its ArmorLocation row. Budget slots and armor locations are
+      the client's rules as implemented by opendata's tools/extract_client.py (INV_BUCKET, INV_ARMORLOC).
+    config:
+      column_types: { inventory_type: integer, name: varchar, is_equippable: boolean, stat_budget_slot: integer, armor_location_id: integer }
     columns:
       - name: inventory_type
         data_tests: [unique, not_null]
+
+  - name: ref_armor_subclasses
+    description: >
+      Armor item subclass (ItemSubClass names for class 4) to the armor type whose ItemArmorTotal and
+      ArmorLocation columns give its armor value. Subclass, not Item.Material: some plate items carry
+      material 1 (metal), which opendata's MATERIAL_COL mapping misses.
+    columns:
+      - name: item_subclass_id
+        data_tests: [unique, not_null]
+
+  - name: ref_item_stat_types
+    description: >
+      Item stat types Forever items use: id and enum name from wago.tools' ItemStatType value list
+      (DB2 viewer, ItemSparse.StatModifier_bonusStat), the published items column, the tooltip label,
+      and whether the tooltip shows it as a base stat ("+12 Stamina") or an Equip: line. Every row is
+      a column on items; a build using an id not listed here fails the import.
+    columns:
+      - name: stat_type_id
+        data_tests: [unique, not_null]
+      - name: column_name
+        data_tests: [unique, not_null]
+      - name: tooltip_kind
+        data_tests:
+          - accepted_values: { arguments: { values: [base, equip] } }
+
+  - name: ref_zone_levels
+    description: >
+      Zone level ranges where the value derived from sub-area exploration levels is wrong.
+      Our own judgement; source says where each came from (in-game, patch notes, the user).
+    config:
+      column_types: { zone_id: integer, name: varchar, min_level: integer, max_level: integer, source: varchar }
+    columns:
+      - name: zone_id
+        data_tests: [unique, not_null]
+
+  - name: ref_dungeon_levels
+    description: >
+      Dungeon and raid level ranges by LFGDungeons id. The client's ContentTuning numbers for
+      dungeons don't match their known ranges, so these are seeded. Source per row.
+    config:
+      column_types: { lfg_dungeon_id: integer, name: varchar, min_level: integer, max_level: integer, source: varchar }
+    columns:
+      - name: lfg_dungeon_id
+        data_tests: [unique, not_null]
+
+  - name: ref_profession_ranks
+    description: Profession trainer ranks with skill bounds and the character level they need. Source per row.
+    columns:
+      - name: rank
+        data_tests: [unique, not_null]
+
   - name: ref_item_bindings
-    description: Item bind type id to the tooltip wording.
+    description: Item bind type id to the tooltip wording. Client constants.
     columns:
       - name: binding
         data_tests: [unique, not_null]
+
   - name: ref_creature_classifications
-    description: Creature rank (normal, elite, rare, boss) from the creature cache.
+    description: Creature rank (normal, elite, rare, boss). Client constants.
     columns:
       - name: classification
         data_tests: [unique, not_null]
+
   - name: ref_map_instance_types
-    description: Map.InstanceType id to name.
+    description: Map.InstanceType id to name. Client constants.
     columns:
       - name: instance_type
         data_tests: [unique, not_null]
+
   - name: ref_spell_schools
-    description: Single-school bits of a spell school mask.
+    description: Single-school bits of a spell school mask. Client constants.
     columns:
       - name: school_mask
         data_tests: [unique, not_null]

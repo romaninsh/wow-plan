@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=./table-schema-1.json
+datasource: wow
+title: Item sets
+table: item_sets
+columns:
+  - { name: item_set_id, label: ID, type: int, flags: [id] }
+  - { name: name, label: Set, type: string, flags: [title, searchable] }
+  - { name: item_count, label: Items, type: int }
+  - { name: item_ids, label: Item IDs, type: string }
+  - { name: required_skill_name, label: Required skill, type: string }
+  - { name: required_skill_rank, label: Skill rank, type: int }
+references:
+  items: { table: item, kind: has_many, foreign_key: item_set_id }

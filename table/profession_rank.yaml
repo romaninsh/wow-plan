@@ -1,0 +1,11 @@
+# yaml-language-server: $schema=./table-schema-1.json
+datasource: wow
+title: Profession ranks
+table: profession_ranks
+columns:
+  - { name: rank, label: Rank, type: int, flags: [id] }
+  - { name: name, label: Name, type: string, flags: [title] }
+  - { name: min_skill, label: From skill, type: int }
+  - { name: max_skill, label: Up to skill, type: int }
+  - { name: required_level, label: Character level, type: int }
+  - { name: source, label: Source, type: string }

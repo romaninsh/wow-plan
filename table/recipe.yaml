@@ -1,21 +1,35 @@
 # yaml-language-server: $schema=./table-schema-1.json
-datasource: opendata
+# skill_required is the client's minimum (usually 1): the skill a trainer asks for is server-side.
+datasource: wow
 title: Recipes
-table: client_recipes
+table: recipes
 columns:
   - { name: recipe_spell_id, label: ID, type: int, flags: [id, searchable] }
-  - { name: name, label: Name, type: string, flags: [title, searchable] }
-  - { name: skill_id, label: Profession, type: int }
-  - { name: skill_required, label: Skill, type: int }
+  - { name: name, label: Recipe, type: string, flags: [title, searchable] }
+  - name: skill_line_id
+    label: Profession ID
+    type: int
+    references: { table: skill_line, kind: has_one, name: profession }
+  - { name: profession_name, label: Profession, type: string }
+  - { name: skill_required, label: Min skill, type: int }
   - { name: skill_green, label: Green, type: int }
   - { name: skill_gray, label: Gray, type: int }
-  - { name: creates, label: Creates, type: string }
-  - { name: reagents, label: Reagents, type: string }
-  - { name: tool_item_ids, label: Tools, type: string }
+  - name: creates_item_id
+    label: Creates ID
+    type: int
+    references: { table: item, kind: has_one, name: creates }
+  - { name: creates_item_name, label: Creates, type: string, flags: [searchable] }
+  - { name: creates_item_quality, label: Quality, type: int }
+  - { name: creates_item_required_level, label: Use level, type: int }
+  - { name: creates_count, label: Count, type: int }
+  - { name: reagent_count, label: Reagents, type: int }
   - name: taught_by_item_id
-    label: Taught by
+    label: Taught by ID
     type: int
     references: { table: item, kind: has_one, name: taught_by }
+  - { name: taught_by_item_name, label: Taught by, type: string }
+  - { name: tool_item_ids, label: Tools, type: string }
   - { name: cast_ms, label: Cast (ms), type: int }
-  - { name: confidence, label: Confidence, type: string }
-  - { name: build_last_seen, label: Build, type: string }
+  - { name: description, label: Description, type: string }
+references:
+  reagents: { table: recipe_reagent, kind: has_many, foreign_key: recipe_spell_id }

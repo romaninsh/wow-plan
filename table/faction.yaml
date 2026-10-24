@@ -1,0 +1,10 @@
+# yaml-language-server: $schema=./table-schema-1.json
+datasource: wow
+title: Factions
+table: factions
+columns:
+  - { name: faction_id, label: ID, type: int, flags: [id, searchable] }
+  - { name: name, label: Faction, type: string, flags: [title, searchable] }
+  - { name: parent_name, label: Group, type: string }
+  - { name: has_reputation, label: Reputation, type: bool }
+  - { name: description, label: Description, type: string }

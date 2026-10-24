@@ -1,0 +1,57 @@
+# wago.tools DB2 tables the dbt models read, one per line. Fetch build downloads each one for a
+# build (with hotfixes merged) into refs/wago/<build>/<Table>.csv when the file is missing.
+# Keep in step with the `wago` source in dbt/models/staging/_sources.yml.
+
+# items
+Item
+ItemSparse
+# class and race restrictions (ItemSparse has no AllowableClass column on this engine)
+ItemSearchName
+ItemEffect
+ItemXItemEffect
+ItemSet
+ItemClass
+ItemSubClass
+RandPropPoints
+ItemArmorQuality
+ItemArmorTotal
+ItemArmorShield
+ArmorLocation
+ItemDamageOneHand
+ItemDamageOneHandCaster
+ItemDamageTwoHand
+ItemDamageTwoHandCaster
+ItemDamageRanged
+ItemDamageThrown
+ItemDamageAmmo
+
+# spells and recipes
+SpellName
+Spell
+SpellLevels
+SpellMisc
+SpellCastTimes
+SpellEffect
+SpellReagents
+SpellTotems
+SkillLineAbility
+SkillLine
+
+# world
+AreaTable
+Map
+UiMap
+UiMapAssignment
+LFGDungeons
+ContentTuning
+TaxiNodes
+TaxiPath
+
+# reference
+ChrClasses
+ChrRaces
+Faction
+QuestSort
+QuestInfo
+CreatureType
+CreatureFamily

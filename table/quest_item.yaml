@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=./table-schema-1.json
+datasource: wow
+title: Quest items
+table: quest_items
+columns:
+  - { name: quest_item_id, label: ID, type: string, flags: [id, hidden] }
+  - { name: quest_id, label: Quest ID, type: int }
+  - { name: quest_name, label: Quest, type: string, flags: [title] }
+  - { name: role, label: Role, type: string, enum: [objective, reward, choice] }
+  - { name: item_id, label: Item ID, type: int }
+  - { name: item_name, label: Item, type: string }
+  - { name: item_quality, label: Quality, type: int }
+  - { name: count, label: Count, type: int }

@@ -2,11 +2,13 @@
 select
     r.recipe_spell_id || ':' || g.item_id as recipe_reagent_id,
     r.recipe_spell_id,
-    r.name                          as recipe_name,
+    s.name                          as recipe_name,
     r.skill_line_id,
     g.item_id,
     i.name                          as item_name,
     g.count
-from {{ ref('stg_opendata__recipes') }} as r,
-     unnest(r.reagents) as t(g)
-left join {{ ref('stg_opendata__items') }} as i on i.item_id = g.item_id
+from {{ ref('int_recipes') }} as r
+join {{ ref('stg_wago__spells') }} as s on s.spell_id = r.recipe_spell_id
+join {{ ref('stg_wago__spell_reagents') }} as g on g.spell_id = r.recipe_spell_id
+left join {{ ref('stg_wago__items') }} as i on i.item_id = g.item_id
+qualify row_number() over (partition by r.recipe_spell_id, g.item_id order by g.slot) = 1
