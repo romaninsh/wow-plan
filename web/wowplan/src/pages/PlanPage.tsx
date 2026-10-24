@@ -1,0 +1,263 @@
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { Link, useParams } from "react-router";
+import { observer, useCollection, useRecord, useRun } from "@vantage-ui/client/react";
+import { useDb } from "../db";
+import type { PlanBlocks, PlanCharacters, PlanTargets } from "../vantage.gen";
+import { getEditCode, rememberPlan, takeEditCodeFromHash } from "../local";
+import { asKeys, asProfessions, asRef, asRefs } from "../shapes";
+import { GameRefLink } from "../components/GameRef";
+
+/** character key -> name and class colour, for target badges */
+interface Who { name: string; cls: string }
+const WhoContext = createContext<Map<string, Who>>(new Map());
+
+/** CSS class for a class's colour (styles.css: .cls-warlock …) */
+const clsOf = (className: string | null) => `cls-${(className ?? "").toLowerCase().replace(/[^a-z]/g, "")}`;
+
+export function PlanPage() {
+  const { id = "" } = useParams();
+  // an edit link (/p/<id>#edit=<code>) stores its code in a cookie before anything renders
+  useState(() => takeEditCodeFromHash(id));
+  return <Plan id={id} />;
+}
+
+const Plan = observer(({ id }: { id: string }) => {
+  const db = useDb();
+  const ref = useMemo(() => db.plans.ref(id), [db, id]);
+  const { value: plan, status } = useRecord(ref);
+  const characters = useCollection(db.plan_characters.where({ plan_id: id }));
+  const blocks = useCollection(db.plan_blocks.where({ plan_id: id }));
+
+  const who = useMemo(() => {
+    const m = new Map<string, Who>();
+    characters.items.forEach((c) => m.set(c.key ?? c.id, { name: c.name ?? "?", cls: clsOf(c.class_name) }));
+    return m;
+  }, [characters.items]);
+
+  if (status === "missing") {
+    return (
+      <div className="wrap">
+        <TopBar />
+        <p className="notice">There is no plan <span className="mono">{id}</span>. Check the link.</p>
+      </div>
+    );
+  }
+  if (!plan) return <p className="notice">Opening plan…</p>;
+
+  return (
+    <WhoContext.Provider value={who}>
+      <div className="wrap">
+        <TopBar />
+        <header className="plan-head row">
+          <div className="grow">
+            <p className="label">
+              {plan.side && <span className={`crest ${plan.side.toLowerCase()}`}>{plan.side}</span>}
+              World of Warcraft: Forever · build {plan.game_build}
+            </p>
+            <h1>{plan.name}</h1>
+            {plan.description && <p className="lead">{plan.description}</p>}
+          </div>
+          <Share id={id} />
+        </header>
+
+        <section className="chars">
+          {characters.items.map((c) => (
+            <CharacterCard key={c.id} character={c} />
+          ))}
+        </section>
+
+        {blocks.items.map((b) => (
+          <Block key={b.id} block={b} />
+        ))}
+        {blocks.loadState !== "loading" && blocks.items.length === 0 && (
+          <section className="block">
+            <p className="empty-page">This page of the plan is still blank. Plans can't be edited in the web app yet.</p>
+          </section>
+        )}
+      </div>
+    </WhoContext.Provider>
+  );
+});
+
+function TopBar() {
+  return (
+    <div className="topbar">
+      <Link to="/" className="brand">wow-<b>plan</b><small>.com</small></Link>
+      <Link to="/" className="muted">New plan</Link>
+    </div>
+  );
+}
+
+/** Share link for everyone; the edit link only when this browser's code edits the plan (the server decides). */
+const Share = observer(({ id }: { id: string }) => {
+  const db = useDb();
+  const check = useRun(db.run.check_edit_code);
+  const code = getEditCode(id);
+  useEffect(() => {
+    if (code) check.start({ plan_id: id, code } as Parameters<typeof check.start>[0]);
+    else rememberPlan(id, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, code]);
+  const result = check.result as { editable?: boolean } | undefined;
+  const editable = check.status === "done" && result?.editable === true;
+  useEffect(() => {
+    if (check.status === "done") rememberPlan(id, editable);
+  }, [check.status, editable, id]);
+
+  const origin = window.location.origin;
+  return (
+    <div className="panel share">
+      <span className="label">Share</span>
+      <CopyLine text={`${origin}/p/${id}`} />
+      {editable && code && (
+        <>
+          <span className="label">Edit link: anyone with it can change the plan</span>
+          <CopyLine text={`${origin}/p/${id}#edit=${code}`} />
+        </>
+      )}
+      <span className={`share-note ${editable ? "editor" : ""}`}>
+        {editable ? "You can edit this plan on this device." : "View only."}
+      </span>
+    </div>
+  );
+});
+
+function CopyLine({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <span className="row">
+      <code className="grow mono" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{text}</code>
+      <button type="button" className="btn subtle" onClick={() => {
+        void navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
+      }}>{copied ? "Copied" : "Copy"}</button>
+    </span>
+  );
+}
+
+const CharacterCard = observer(({ character: c }: { character: PlanCharacters }) => {
+  const professions = asProfessions(c.professions);
+  const start = asRef(c.start);
+  return (
+    <article className={`panel char ${clsOf(c.class_name)}`}>
+      <div className="char-head">
+        <span className="sigil" aria-hidden="true">{(c.class_name ?? "?").slice(0, 1)}</span>
+        <div>
+          <h2>{c.name}</h2>
+          <span className="race">{c.race_name} {c.class_name}</span>
+        </div>
+      </div>
+      <dl>
+        {start && (
+          <>
+            <dt>Starts</dt>
+            <dd><GameRefLink value={start} /></dd>
+          </>
+        )}
+        {professions.primary.length > 0 && (
+          <>
+            <dt>Professions</dt>
+            <dd><RefList refs={professions.primary} /></dd>
+          </>
+        )}
+        {professions.secondary.length > 0 && (
+          <>
+            <dt>Secondary</dt>
+            <dd><RefList refs={professions.secondary} /></dd>
+          </>
+        )}
+        {c.notes && (
+          <>
+            <dt>Notes</dt>
+            <dd>{c.notes}</dd>
+          </>
+        )}
+      </dl>
+    </article>
+  );
+});
+
+function RefList({ refs }: { refs: ReturnType<typeof asRefs> }) {
+  return (
+    <>
+      {refs.map((r, i) => (
+        <span key={i}>
+          {i > 0 && ", "}
+          <GameRefLink value={r} />
+        </span>
+      ))}
+    </>
+  );
+}
+
+const Block = observer(({ block }: { block: PlanBlocks }) => {
+  const db = useDb();
+  const targets = useCollection(db.plan_targets.where({ block_id: block.id }));
+  const zones = asRefs(block.zones);
+  return (
+    <section className="panel block">
+      <div className="block-head">
+        <h3>
+          <span className="levels tnum">{block.min_level}–{block.max_level}</span>
+          {block.title}
+        </h3>
+        {zones.length > 0 && <span className="block-zones"><RefList refs={zones} /></span>}
+      </div>
+      {block.notes && <p className="block-notes">{block.notes}</p>}
+      <ul className="targets">
+        {targets.items.map((t) => (
+          <Target key={t.id} target={t} />
+        ))}
+      </ul>
+    </section>
+  );
+});
+
+const KIND: Record<string, string> = {
+  travel_to_zone: "Travel",
+  acquire_item: "Acquire",
+  complete_quest: "Quest",
+  reach_profession_level: "Profession",
+  craft_item: "Craft",
+  run_dungeon: "Dungeon",
+  reach_level: "Level",
+  note: "Note",
+};
+const PURPOSE: Record<string, string> = { sell: "for the auction house", use: "to use", give: "to give" };
+
+const Target = observer(({ target: t }: { target: PlanTargets }) => {
+  const who = useContext(WhoContext);
+  const assigned = asKeys(t.characters);
+  const everyone = [...who.keys()];
+  const owners = assigned.length > 0 ? assigned : everyone;
+  const done = asKeys(t.done_by);
+  const doneCount = owners.filter((k) => done.includes(k)).length;
+  const state = doneCount === 0 ? "" : doneCount === owners.length ? "done" : "part";
+  const ref = asRef(t.ref);
+  const forWho = t.for_character ? who.get(t.for_character)?.name : null;
+
+  return (
+    <li className={`target ${state === "done" ? "done" : ""}`}>
+      <span className={`tick ${state}`} title={state === "part" ? `Done by ${done.map((k) => who.get(k)?.name ?? k).join(", ")}` : undefined} />
+      <div>
+        <div className="target-title">{t.title}</div>
+        <div className="target-meta">
+          <span className="kind">{KIND[t.kind ?? ""] ?? t.kind}</span>
+          {ref && <GameRefLink value={ref} />}
+          {t.count != null && t.count > 1 && <span className="tnum">×{t.count}</span>}
+          {t.level != null && <span className="tnum">to {t.level}</span>}
+          {t.purpose && <span>{t.purpose === "give" && forWho ? `for ${forWho}` : PURPOSE[t.purpose]}</span>}
+          {t.notes && <span>{t.notes}</span>}
+        </div>
+      </div>
+      <div className="badges">
+        {assigned.length === 0 && everyone.length > 1 ? (
+          <span className="badge both">Both</span>
+        ) : (
+          assigned.map((k) => (
+            <span key={k} className={`badge ${who.get(k)?.cls ?? ""}`}>{who.get(k)?.name ?? k}</span>
+          ))
+        )}
+      </div>
+    </li>
+  );
+});

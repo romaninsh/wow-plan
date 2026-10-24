@@ -1,0 +1,7 @@
+# yaml-language-server: $schema=./datasource-schema-1.json
+# Guides: plans, their characters, level blocks and targets. Single-node replica set from
+# composer.yaml (directConnection: its member is localhost inside the container).
+type: mongo
+description: wow-plan guides (MongoDB, database wowplan)
+url: mongodb://mongo:27017/wowplan?directConnection=true&serverSelectionTimeoutMS=2000
+database: wowplan

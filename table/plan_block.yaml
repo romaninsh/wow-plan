@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=./table-schema-1.json
+# A level range in a plan; every target in it must fit the range.
+datasource: plans
+title: Level blocks
+table: plan_blocks
+columns:
+  - { name: _id, label: ID, type: string, flags: [id, hidden] }
+  - name: plan_id
+    label: Plan
+    type: string
+    references: { table: plan, kind: has_one, name: plan }
+  - { name: plan.name, label: Plan, type: string }
+  - { name: order, label: Order, type: int }
+  - { name: min_level, label: From level, type: int }
+  - { name: max_level, label: To level, type: int }
+  - { name: title, label: Block, type: string, flags: [title, searchable] }
+  # embedded array: not hidden, so the API's generated types include it
+  - { name: zones, label: Zones, type: string }
+  - { name: notes, label: Notes, type: string }
+references:
+  targets: { table: plan_target, kind: has_many, foreign_key: block_id }

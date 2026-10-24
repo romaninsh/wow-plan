@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=./table-schema-1.json
+# One of a plan's 1-2 characters. race_id / class_id point at Postgres wow.races / wow.classes;
+# *_name are snapshots. professions is { primary: [ref], secondary: [ref] }.
+datasource: plans
+title: Characters
+table: plan_characters
+columns:
+  - { name: _id, label: ID, type: string, flags: [id, hidden] }
+  - name: plan_id
+    label: Plan
+    type: string
+    references: { table: plan, kind: has_one, name: plan }
+  - { name: plan.name, label: Plan, type: string }
+  - { name: key, label: Key, type: string }
+  - { name: order, label: Order, type: int }
+  - { name: name, label: Character, type: string, flags: [title, searchable, mandatory] }
+  - { name: race_id, label: Race ID, type: int }
+  - { name: race_name, label: Race, type: string, flags: [searchable] }
+  - { name: class_id, label: Class ID, type: int }
+  - { name: class_name, label: Class, type: string, flags: [searchable] }
+  # embedded documents: not hidden, so the API's generated types include them (the web app reads them)
+  - { name: professions, label: Professions, type: string }
+  - { name: start, label: Starts at, type: string }
+  - { name: notes, label: Notes, type: string }

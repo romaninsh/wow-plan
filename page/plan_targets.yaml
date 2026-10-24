@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=./page-schema-1.json
+title: Targets
+body:
+  - kind: binder
+    name: targets
+    observe: plan_target
+    params:
+      default_sort: { column: _id, direction: asc }
+      filter: [plan_id, kind, purpose]
+      columns:
+        title: { label: Target, width: 320, pin: true }
+        kind:
+          label: Kind
+          width: 160
+          labels:
+            travel_to_zone: Travel to zone
+            acquire_item: Acquire item
+            complete_quest: Complete quest
+            reach_profession_level: Profession level
+            craft_item: Craft item
+            run_dungeon: Run dungeon
+            reach_level: Character level
+            note: Note
+          color: { blue: [acquire_item, run_dungeon], green: [craft_item, reach_profession_level], yellow: [complete_quest], muted: [note] }
+        block.title: { label: Block, width: 180 }
+        count: { label: Count, width: 60 }
+        level: { label: Level, width: 60 }
+        purpose: { label: Purpose, width: 80 }
+        for_character: { label: For, width: 80 }
+        plan_id: { label: Plan, width: 140, link: plan }

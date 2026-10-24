@@ -23,8 +23,14 @@ Three layers:
    being removed. Built with AI help; we focus on presentation. Each guide has a short random link
    (7 characters); opening it shows the guide and offers to clone it. Example material: the user's
    "House of Grr" planner (Vinnie, Undead Warlock; Lin, Skyborne Druid), checked for levels 1-20.
-3. **API, MCP and a React client (later).** Read-only reference data and guide access for
-   wow-plan.com and AI agents, through Vantage `api/`.
+3. **API and web app (started).** `api/wowplan.yaml` serves guides and the game data they reference,
+   read-only; the only writes are server actions (`create_plan`, `check_edit_code`). `web/wowplan/`
+   is the React app: an intro (slogan, plan name, one character plus an optional friend, recently
+   opened plans) and a read-only plan page (characters, level blocks, targets) with hover lookups
+   of items, zones, areas, dungeons and skills. House rule: logic lives in the backend; the page
+   keeps only what belongs to the browser (edit-code cookies, the recent list). Each plan has a
+   share link (`/p/<id>`) and an edit link (`/p/<id>#edit=<code>`); the code goes into a cookie
+   and the server says whether it edits. MCP access for AI agents comes later.
 
 ## Data notes
 

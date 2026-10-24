@@ -1,0 +1,122 @@
+# yaml-language-server: $schema=./api-schema-1.json
+title: wow-plan
+description: >
+  The wow-plan.com web app: guides (MongoDB) and the game data they reference (Postgres).
+  Every entity is read-only; writes happen in the API's actions (create_plan, check_edit_code),
+  which check everything on the server.
+
+entities:
+  # ── guides (MongoDB) ─────────────────────────────────────────────────────────
+  - name: plans
+    observe: plan
+    read_only: true
+    params:
+      # edit_code_hash is deliberately not listed
+      columns: [name, description, game_build, forked_from, side, created_at, updated_at]
+      filter: [forked_from]
+      default_sort: -created_at
+
+  - name: plan_characters
+    observe: plan_character
+    read_only: true
+    params:
+      columns: [plan_id, key, order, name, race_id, race_name, class_id, class_name, professions, start, notes]
+      filter: [plan_id]
+      default_sort: order
+
+  - name: plan_blocks
+    observe: plan_block
+    read_only: true
+    params:
+      columns: [plan_id, order, title, min_level, max_level, zones, notes]
+      filter: [plan_id]
+      default_sort: order
+
+  - name: plan_targets
+    observe: plan_target
+    read_only: true
+    params:
+      columns: [plan_id, block_id, order, kind, title, characters, ref, count, level, purpose, for_character, done_by, notes]
+      filter: [plan_id, block_id, kind]
+      default_sort: order
+
+  # ── game data (Postgres), looked up by id on hover ───────────────────────────
+  - name: items
+    observe: item
+    read_only: true
+    params:
+      columns: [name, quality, quality_name, item_level, required_level, item_class_name, item_subclass_name,
+                inventory_type, slot_name, armor_type, binding_name, armor, damage_min, damage_max,
+                weapon_speed_ms, dps, usable_by_classes, required_skill_name, required_skill_rank,
+                item_set_id, item_set_name, sell_price_text, description, build]
+      filter: [item_set_id, quality]
+      default_sort: name
+
+  - name: item_stats
+    observe: item_stat
+    read_only: true
+    params:
+      columns: [item_id, slot, stat, label, tooltip_kind, value]
+      filter: [item_id]
+      default_sort: slot
+
+  - name: item_spells
+    observe: item_spell
+    read_only: true
+    params:
+      columns: [item_id, spell_id, spell_name, trigger, spell_description]
+      filter: [item_id]
+      default_sort: spell_id
+
+  - name: zones
+    observe: zone
+    read_only: true
+    params:
+      columns: [name, kind, map_name, min_level, max_level, level_source, sub_area_count, quest_count]
+      filter: [kind]
+      default_sort: name
+
+  - name: areas
+    observe: area
+    read_only: true
+    params:
+      columns: [name, parent_name, zone_id, zone_name, map_name, exploration_level]
+      filter: [zone_id]
+      default_sort: name
+
+  - name: dungeons
+    observe: dungeon
+    read_only: true
+    params:
+      columns: [name, kind, map_name, max_players, min_level, max_level, level_source]
+      filter: [kind]
+      default_sort: name
+
+  - name: skill_lines
+    observe: skill_line
+    read_only: true
+    params:
+      columns: [name, category, recipe_count, is_craft, description]
+      filter: [category]
+      default_sort: name
+
+  - name: class_race_combos
+    observe: class_race_combo
+    read_only: true
+    params:
+      columns: [label, race_id, race_name, class_id, class_name, side]
+      filter: [side, race_id, class_id]
+      default_sort: label
+    api: { load: instant }
+
+  - name: build_info
+    observe: build_info
+    read_only: true
+    params:
+      columns: [product, fetched_at, imported_at]
+    api: { load: instant }
+
+actions: [create_plan, check_edit_code]
+
+auth:
+  local: none

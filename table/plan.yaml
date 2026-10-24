@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=./table-schema-1.json
+# A guide. _id is the 7-character share id (wow-plan.com/<id>). Schema: mongo/schema.js.
+datasource: plans
+title: Plans
+table: plans
+columns:
+  - { name: _id, label: Link ID, type: string, flags: [id, searchable] }
+  - { name: name, label: Plan, type: string, flags: [title, searchable, mandatory] }
+  - { name: description, label: Description, type: string, flags: [searchable] }
+  - { name: game_build, label: Game build, type: string }
+  - { name: side, label: Side, type: string, enum: [Alliance, Horde] }
+  # SHA-256 of the edit code; never exposed through the API
+  - { name: edit_code_hash, label: Edit code hash, type: string, flags: [hidden] }
+  - name: forked_from
+    label: Cloned from
+    type: string
+    references: { table: plan, kind: has_one, name: original }
+  - { name: created_at, label: Created, type: timestamp, time_precision: minutes, flags: [calculated] }
+  - { name: updated_at, label: Updated, type: timestamp, time_precision: minutes, flags: [calculated] }
+references:
+  characters: { table: plan_character, kind: has_many, foreign_key: plan_id }
+  blocks: { table: plan_block, kind: has_many, foreign_key: plan_id }
+  targets: { table: plan_target, kind: has_many, foreign_key: plan_id }
+  clones: { table: plan, kind: has_many, foreign_key: forked_from }

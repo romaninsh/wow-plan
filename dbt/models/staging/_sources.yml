@@ -49,6 +49,8 @@ sources:
       - name: TaxiPath
       - name: ChrClasses
       - name: ChrRaces
+      - name: CharBaseInfo
+      - name: FactionTemplate
       - name: Faction
       - name: QuestSort
       - name: QuestInfo

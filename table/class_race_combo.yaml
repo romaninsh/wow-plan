@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=./table-schema-1.json
+# Race/class pairs a player can create in the imported build, with the race's side.
+datasource: wow
+title: Race and class
+table: class_race_combos
+columns:
+  - { name: combo_id, label: ID, type: string, flags: [id] }
+  - { name: label, label: Character, type: string, flags: [title, searchable] }
+  - { name: race_id, label: Race ID, type: int }
+  - { name: race_name, label: Race, type: string, flags: [searchable] }
+  - { name: class_id, label: Class ID, type: int }
+  - { name: class_name, label: Class, type: string, flags: [searchable] }
+  - { name: side, label: Side, type: string, enum: [Alliance, Horde] }

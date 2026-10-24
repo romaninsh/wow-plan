@@ -43,6 +43,15 @@ items:
         label: Classes, races, factions
         icon: Shield
   - divider: true
+  - section: Guides
+    children:
+      - page: plans
+        label: Plans
+        icon: Map
+      - page: plan_targets
+        label: Targets
+        icon: ListChecks
+  - divider: true
   - page: data
     label: Data
     icon: Database

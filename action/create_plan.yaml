@@ -1,0 +1,91 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Creates a plan from the web intro screen: a name and one or two characters (name, race_id,
+# class_id). Everything is checked here, not in the page: the name, 1-2 characters, each
+# race/class pair against the build's class_race_combos, one side per plan. Returns the share id
+# and the edit code; only the code's SHA-256 is stored.
+#
+# generate_password(n) is the stdlib's random source (no 0 1 I O l). A general random function
+# is noted in FEEDBACK.md.
+kind: script
+dialog:
+  title: Create plan
+body: |
+  let name = if args.name == () { "" } else { `${args.name}` };
+  name.trim();
+  if name.len() == 0 { throw "Give the plan a name"; }
+  if name.len() > 120 { throw "The plan name is too long (120 characters at most)"; }
+
+  let chars = args.characters;
+  if type_of(chars) != "array" || chars.len() < 1 || chars.len() > 2 {
+    throw "A plan has one or two characters";
+  }
+
+  let side = ();
+  let docs = [];
+  let keys = [];
+  for c in chars {
+    let cname = if c.name == () { "" } else { `${c.name}` };
+    cname.trim();
+    if cname.len() == 0 { throw "Every character needs a name"; }
+    if cname.len() > 40 { throw `"${cname}" is too long for a character name`; }
+
+    let race_id = parse_int(`${c.race_id}`);
+    let class_id = parse_int(`${c.class_id}`);
+    let combo = table("class_race_combo").where("race_id", race_id).where("class_id", class_id).first();
+    if combo == () { throw `That race and class can't be created in this build`; }
+    if side != () && combo.side != side {
+      throw "Both characters must be on the same side: Alliance or Horde";
+    }
+    side = combo.side;
+
+    // a short handle from the name: lowercase letters and digits
+    let key = "";
+    for ch in cname.to_lower().chars() {
+      if (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') { key += ch; }
+    }
+    if key.len() > 20 { key = key.sub_string(0, 20); }
+    if key.len() == 0 { key = `c${docs.len() + 1}`; }
+    if keys.contains(key) { key = `${key.sub_string(0, 18)}2`; }
+    keys.push(key);
+
+    docs.push(#{
+      key: key,
+      order: docs.len() + 1,
+      name: cname,
+      race_id: combo.race_id,
+      race_name: combo.race_name,
+      class_id: combo.class_id,
+      class_name: combo.class_name,
+      professions: #{ primary: [], secondary: [] },
+    });
+  }
+
+  let id = generate_password(7);
+  let tries = 1;
+  while table("plan").where("_id", id).count() > 0 {
+    if tries >= 10 { throw "Couldn't find a free plan id; try again"; }
+    id = generate_password(7);
+    tries += 1;
+  }
+  let code = generate_password(12);
+  let info = table("build_info").first();
+  let stamp = `${now()}`;
+
+  table("plan").insert(#{
+    _id: id,
+    name: name,
+    game_build: if info == () { "" } else { info.build },
+    forked_from: (),
+    side: side,
+    edit_code_hash: hash_secret(code),
+    created_at: stamp,
+    updated_at: stamp,
+  });
+  for d in docs {
+    d._id = `${id}.${d.key}`;
+    d.plan_id = id;
+    table("plan_character").insert(d);
+  }
+
+  #{ id: id, edit_code: code }

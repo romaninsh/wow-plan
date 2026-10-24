@@ -50,6 +50,9 @@ TaxiPath
 # reference
 ChrClasses
 ChrRaces
+# which race/class pairs a player can create; a race's faction through its faction template
+CharBaseInfo
+FactionTemplate
 Faction
 QuestSort
 QuestInfo

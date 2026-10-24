@@ -74,6 +74,17 @@ models:
       - name: race_id
         data_tests: [unique, not_null]
 
+  - name: class_race_combos
+    description: Race/class pairs a player can create (CharBaseInfo), with the race's side (FactionTemplate).
+    config: { meta: { pg_primary_key: combo_id, pg_indexes: [race_id, class_id, side] } }
+    columns:
+      - name: combo_id
+        data_tests: [unique, not_null]
+      - name: side
+        data_tests:
+          - not_null
+          - accepted_values: { arguments: { values: [Alliance, Horde] } }
+
   - name: factions
     description: Reputation factions and faction groups (Faction).
     config: { meta: { pg_primary_key: faction_id, pg_indexes: [name, parent_faction_id] } }

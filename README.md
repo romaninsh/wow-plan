@@ -24,6 +24,10 @@ selecting an item shows it as an in-game style tooltip.*
 | `dbt/` | dbt project that turns downloaded tables into the published data set ([README](dbt/README.md)) |
 | `docs/` | designs |
 | `seeds/` | our own data for facts no source publishes ([README](seeds/README.md)) |
+| `mongo/` | guides in MongoDB: collection schema and sample plans ([README](mongo/README.md)) |
+| `api/wowplan.yaml` | the read-only API the web app uses; writes only through `create_plan` / `check_edit_code` (`action/`) |
+| `web/wowplan/` | the wow-plan.com React app (built by Vantage's web dev container) |
+| `tests/` | `api_actions.mjs`: checks the API's actions over the WebSocket (`node tests/api_actions.mjs <api url>`) |
 | `agents/` | notes for AI agents working on this repo (`BRIEF.md`) |
 | `composer.yaml` | local services Vantage starts |
 | `refs/` | downloads: the opendata clone and wago.tools exports. Not committed |

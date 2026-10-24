@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=./page-schema-1.json
+title: Plans
+body:
+  - kind: binder
+    name: plans
+    observe: plan
+    params:
+      default_sort: { column: created_at, direction: desc }
+      toolbar:
+        - label: "Reset sample plans"
+          icon: RefreshCw
+          # language=rhai
+          action: |
+            actions.reset_sample_plans();
+      columns:
+        name: { label: Plan, width: 220, pin: true }
+        _id: { label: Link ID, width: 90 }
+        description: { label: Description, width: 420 }
+        forked_from: { label: Cloned from, width: 160, link: plan }
+        game_build: { label: Game build, width: 110 }
+        created_at: { label: Created, width: 140 }

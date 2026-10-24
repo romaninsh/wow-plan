@@ -1,0 +1,32 @@
+# yaml-language-server: $schema=./table-schema-1.json
+# A goal inside a level block. ref holds the Blizzard id(s) of what it is about plus a name
+# snapshot; characters / done_by are character keys (empty characters = everyone).
+datasource: plans
+title: Targets
+table: plan_targets
+columns:
+  - { name: _id, label: ID, type: string, flags: [id, hidden] }
+  - name: plan_id
+    label: Plan
+    type: string
+    references: { table: plan, kind: has_one, name: plan }
+  - name: block_id
+    label: Block
+    type: string
+    references: { table: plan_block, kind: has_one, name: block }
+  - { name: block.title, label: Block, type: string }
+  - { name: order, label: Order, type: int }
+  - name: kind
+    label: Kind
+    type: string
+    enum: [travel_to_zone, acquire_item, complete_quest, reach_profession_level, craft_item, run_dungeon, reach_level, note]
+  - { name: title, label: Target, type: string, flags: [title, searchable, mandatory] }
+  - { name: count, label: Count, type: int }
+  - { name: level, label: Level, type: int }
+  - { name: purpose, label: Purpose, type: string, enum: [sell, use, give] }
+  - { name: for_character, label: For, type: string }
+  # embedded arrays and document: not hidden, so the API's generated types include them
+  - { name: characters, label: Who, type: string }
+  - { name: done_by, label: Done by, type: string }
+  - { name: ref, label: Reference, type: string }
+  - { name: notes, label: Notes, type: string }

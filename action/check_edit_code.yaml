@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Answers whether an edit code opens a plan for editing. The web page keeps codes in cookies and
+# asks here; it never sees the stored hash. Returns { found, editable }.
+kind: script
+dialog:
+  title: Check edit code
+body: |
+  let plan = if args.plan_id == () { () } else { table("plan").where("_id", `${args.plan_id}`).first() };
+  if plan == () {
+    #{ found: false, editable: false }
+  } else {
+    let code = if args.code == () { "" } else { `${args.code}` };
+    #{ found: true, editable: code.len() > 0 && hash_secret(code) == plan.edit_code_hash }
+  }
