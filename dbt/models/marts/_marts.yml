@@ -1,0 +1,185 @@
+version: 2
+
+# Published tables. Each is copied into data/wow.sqlite at the end of a run (macros/publish_sqlite.sql);
+# meta.sqlite_primary_key becomes a UNIQUE index there, meta.sqlite_indexes plain indexes.
+
+models:
+  # ── world ────────────────────────────────────────────────────────────────
+  - name: maps
+    description: Continents, dungeons, raids and battlegrounds (Map.db2).
+    config: { meta: { sqlite_primary_key:map_id } }
+    columns:
+      - name: map_id
+        data_tests: [unique, not_null]
+
+  - name: areas
+    description: Every named place (AreaTable.db2) with its parent, top-level zone and map.
+    config: { meta: { sqlite_primary_key:area_id, sqlite_indexes: [zone_id, parent_area_id, map_id] } }
+    columns:
+      - name: area_id
+        data_tests: [unique, not_null]
+      - name: zone_id
+        description: The top-level area this one sits in; equals area_id for a zone.
+        data_tests: [not_null]
+
+  - name: zones
+    description: Top-level areas (zones, cities, instances) with sub-area and quest counts.
+    config: { meta: { sqlite_primary_key:zone_id, sqlite_indexes: [map_id] } }
+    columns:
+      - name: zone_id
+        data_tests: [unique, not_null]
+
+  - name: taxi_nodes
+    description: Flight masters (TaxiNodes.db2), world coordinates.
+    config: { meta: { sqlite_primary_key:taxi_node_id, sqlite_indexes: [map_id] } }
+    columns:
+      - name: taxi_node_id
+        data_tests: [unique, not_null]
+
+  - name: taxi_paths
+    description: Direct flight legs between two flight masters, with the cost.
+    config: { meta: { sqlite_primary_key:taxi_path_id, sqlite_indexes: [from_taxi_node_id, to_taxi_node_id] } }
+    columns:
+      - name: taxi_path_id
+        data_tests: [unique, not_null]
+
+  # ── reference ────────────────────────────────────────────────────────────
+  - name: classes
+    description: Playable classes (ChrClasses.db2) and their bit in allowable_class_mask.
+    config: { meta: { sqlite_primary_key:class_id } }
+    columns:
+      - name: class_id
+        data_tests: [unique, not_null]
+
+  - name: races
+    description: Races (ChrRaces.db2), playable and NPC, and their bit in allowable_race_mask.
+    config: { meta: { sqlite_primary_key:race_id } }
+    columns:
+      - name: race_id
+        data_tests: [unique, not_null]
+
+  - name: factions
+    description: Reputation factions and faction groups (Faction.db2).
+    config: { meta: { sqlite_primary_key:faction_id, sqlite_indexes: [parent_faction_id] } }
+    columns:
+      - name: faction_id
+        data_tests: [unique, not_null]
+
+  - name: skill_lines
+    description: Professions, secondary skills, weapon and armor skills, class trees (SkillLine.db2).
+    config: { meta: { sqlite_primary_key:skill_line_id, sqlite_indexes: [category_id] } }
+    columns:
+      - name: skill_line_id
+        data_tests: [unique, not_null]
+
+  - name: item_sets
+    description: Named item sets (ItemSet.db2); item_ids is a JSON array.
+    config: { meta: { sqlite_primary_key:item_set_id } }
+    columns:
+      - name: item_set_id
+        data_tests: [unique, not_null]
+
+  - name: item_subclasses
+    description: Item subclass names per item class (ItemSubClass.db2). item_subclass_key = class * 100 + subclass.
+    config: { meta: { sqlite_primary_key:item_subclass_key, sqlite_indexes: [item_class_id] } }
+    columns:
+      - name: item_subclass_key
+        data_tests: [unique, not_null]
+
+  # ── catalog ──────────────────────────────────────────────────────────────
+  - name: items
+    description: >
+      Items with class, slot, quality, binding and set resolved to names. Stats, damage and armor are
+      computed by the opendata extractor; spot-check before relying on them. has_details is false for
+      stub rows the client only knows the class and slot of.
+    config: { meta: { sqlite_primary_key:item_id, sqlite_indexes: [name, quality, item_level, required_level, item_class_id, inventory_type, item_set_id] } }
+    columns:
+      - name: item_id
+        data_tests: [unique, not_null]
+      - name: item_set_id
+        data_tests:
+          - relationships: { arguments: { to: ref('item_sets'), field: item_set_id } }
+
+  - name: item_stats
+    description: One row per item and stat (long form of items.stats).
+    config: { meta: { sqlite_primary_key:item_stat_id, sqlite_indexes: [item_id, stat] } }
+    columns:
+      - name: item_stat_id
+        data_tests: [unique, not_null]
+
+  - name: quests
+    description: >
+      Quests from the client cache (only those some player has seen). zone_id is set for zone quests,
+      quest_sort_id for category quests (class, profession, seasonal).
+    config: { meta: { sqlite_primary_key:quest_id, sqlite_indexes: [zone_id, quest_sort_id, quest_level, min_level] } }
+    columns:
+      - name: quest_id
+        data_tests: [unique, not_null]
+      - name: zone_id
+        data_tests:
+          - relationships: { arguments: { to: ref('areas'), field: area_id } }
+
+  - name: quest_items
+    description: Items a quest asks for (objective) or gives (reward, choice).
+    config: { meta: { sqlite_primary_key:quest_item_id, sqlite_indexes: [quest_id, item_id] } }
+    columns:
+      - name: quest_item_id
+        data_tests: [unique, not_null]
+      - name: role
+        data_tests:
+          - accepted_values: { arguments: { values: [objective, reward, choice] } }
+
+  - name: quest_npcs
+    description: Creatures a quest asks you to kill or interact with.
+    config: { meta: { sqlite_primary_key:quest_npc_id, sqlite_indexes: [quest_id, npc_id] } }
+    columns:
+      - name: quest_npc_id
+        data_tests: [unique, not_null]
+
+  - name: quest_reputation
+    description: Reputation a quest awards, per faction.
+    config: { meta: { sqlite_primary_key:quest_reputation_id, sqlite_indexes: [quest_id, faction_id] } }
+    columns:
+      - name: quest_reputation_id
+        data_tests: [unique, not_null]
+
+  - name: recipes
+    description: Crafting recipes with profession, skill thresholds (no yellow) and the item made.
+    config: { meta: { sqlite_primary_key:recipe_spell_id, sqlite_indexes: [skill_line_id, skill_required, creates_item_id] } }
+    columns:
+      - name: recipe_spell_id
+        data_tests: [unique, not_null]
+      - name: creates_item_id
+        data_tests:
+          - relationships: { arguments: { to: ref('items'), field: item_id } }
+
+  - name: recipe_reagents
+    description: One row per recipe and reagent.
+    config: { meta: { sqlite_primary_key:recipe_reagent_id, sqlite_indexes: [recipe_spell_id, item_id] } }
+    columns:
+      - name: recipe_reagent_id
+        data_tests: [unique, not_null]
+      - name: item_id
+        data_tests:
+          - relationships: { arguments: { to: ref('items'), field: item_id } }
+
+  - name: npcs
+    description: Creatures from the client cache (only those some player has seen).
+    config: { meta: { sqlite_primary_key:npc_id, sqlite_indexes: [name] } }
+    columns:
+      - name: npc_id
+        data_tests: [unique, not_null]
+
+  - name: game_objects
+    description: Game objects (chests, herbs, ore, doors, quest objects) from the client cache.
+    config: { meta: { sqlite_primary_key:object_id, sqlite_indexes: [name, required_skill_line_id] } }
+    columns:
+      - name: object_id
+        data_tests: [unique, not_null]
+
+  - name: spells
+    description: Spells (SpellName and friends), with school and skill resolved.
+    config: { meta: { sqlite_primary_key:spell_id, sqlite_indexes: [name, skill_line_id] } }
+    columns:
+      - name: spell_id
+        data_tests: [unique, not_null]

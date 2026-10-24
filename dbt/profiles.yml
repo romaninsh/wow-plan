@@ -1,0 +1,7 @@
+wow_db:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: ../data/wow.duckdb
+      threads: 4

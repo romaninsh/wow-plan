@@ -1,0 +1,3 @@
+type: mongo
+url: mongodb://mongo:27017/app
+database: app

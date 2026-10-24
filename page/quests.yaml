@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=./page-schema-1.json
+title: Quests
+body:
+  - kind: binder
+    name: quests
+    observe: quest
+    params:
+      allow_add: false
+      default_sort: { column: quest_level, direction: asc }
+      columns:
+        quest_id: { label: ID, width: 70 }
+        name: { label: Quest, width: 240, pin: true }
+        quest_level: { label: Level, width: 60 }
+        min_level: { label: Min, width: 60 }
+        zone_or_sort: { label: Zone ID, width: 80 }
+        objectives: { label: Objectives, width: 420 }

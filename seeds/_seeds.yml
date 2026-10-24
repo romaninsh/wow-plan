@@ -1,0 +1,35 @@
+version: 2
+
+# Game constants the client keeps in code, not in DB2 tables. Typed in by hand (opendata
+# source.kind "manual"); check them against the client's Lua enums when a build changes them.
+seeds:
+  - name: ref_item_qualities
+    description: Item quality (rarity) id to name and the tooltip colour.
+    columns:
+      - name: quality
+        data_tests: [unique, not_null]
+  - name: ref_inventory_types
+    description: Item inventory type (equipment slot) id to slot name.
+    columns:
+      - name: inventory_type
+        data_tests: [unique, not_null]
+  - name: ref_item_bindings
+    description: Item bind type id to the tooltip wording.
+    columns:
+      - name: binding
+        data_tests: [unique, not_null]
+  - name: ref_creature_classifications
+    description: Creature rank (normal, elite, rare, boss) from the creature cache.
+    columns:
+      - name: classification
+        data_tests: [unique, not_null]
+  - name: ref_map_instance_types
+    description: Map.InstanceType id to name.
+    columns:
+      - name: instance_type
+        data_tests: [unique, not_null]
+  - name: ref_spell_schools
+    description: Single-school bits of a spell school mask.
+    columns:
+      - name: school_mask
+        data_tests: [unique, not_null]

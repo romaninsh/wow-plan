@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=./menu-schema-1.json
+title: WoW Forever DB
+items:
+  - page: items
+    label: Items
+    icon: Gem
+  - page: quests
+    label: Quests
+    icon: BookOpen
+  - page: recipes
+    label: Recipes
+    icon: Hammer
+  - page: npcs
+    label: NPCs
+    icon: Users
+  - page: objects
+    label: Objects
+    icon: Box
+  - page: spells
+    label: Spells
+    icon: Sparkles

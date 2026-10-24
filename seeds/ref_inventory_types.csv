@@ -1,0 +1,30 @@
+inventory_type,name,is_equippable
+0,Non-equippable,false
+1,Head,true
+2,Neck,true
+3,Shoulder,true
+4,Shirt,true
+5,Chest,true
+6,Waist,true
+7,Legs,true
+8,Feet,true
+9,Wrist,true
+10,Hands,true
+11,Finger,true
+12,Trinket,true
+13,One-Hand,true
+14,Off Hand,true
+15,Ranged,true
+16,Back,true
+17,Two-Hand,true
+18,Bag,false
+19,Tabard,true
+20,Chest,true
+21,Main Hand,true
+22,Off Hand,true
+23,Held In Off-hand,true
+24,Ammo,true
+25,Thrown,true
+26,Ranged,true
+27,Quiver,false
+28,Relic,true

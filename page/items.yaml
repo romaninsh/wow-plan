@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=./page-schema-1.json
+title: Items
+body:
+  - kind: binder
+    name: items
+    observe: item
+    params:
+      allow_add: false
+      default_sort: { column: item_id, direction: asc }
+      filter: [quality, ">item_level", ">required_level"]
+      columns:
+        item_id: { label: ID, width: 70 }
+        name: { label: Name, width: 260, pin: true }
+        quality:
+          label: Quality
+          labels: { "0": Poor, "1": Common, "2": Uncommon, "3": Rare, "4": Epic, "5": Legendary, "6": Artifact, "7": Heirloom }
+          color: { muted: ["0"], green: ["2"], blue: ["3"], magenta: ["4"], yellow: ["5", "6", "7"] }
+        item_level: { label: iLvl, width: 60 }
+        required_level: { label: Req, width: 60 }
+        stats: { label: Stats, width: 220 }
+        sell_price: { label: Sell (copper) }

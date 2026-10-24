@@ -1,0 +1,46 @@
+version: 2
+
+sources:
+  - name: opendata
+    description: >
+      Client-layer JSON Lines from github.com/wowlayerup-forever/opendata (cloned into refs/opendata).
+      One record per line, keyed by Blizzard ID, with provenance (source, build_first_seen,
+      build_last_seen, confidence). CC BY 4.0.
+    meta:
+      external_location: "read_json_auto('{{ var('opendata_dir') }}/{name}.jsonl', sample_size=-1)"
+    tables:
+      - name: items
+      - name: quests
+      - name: recipes
+      - name: npcs
+      - name: objects
+      - name: spells
+
+  - name: wago
+    description: >
+      DB2 tables exported as CSV from wago.tools for one client build (refs/wago/<build>/).
+      Column names are the DB2 field names; *_lang columns are enUS text.
+    meta:
+      external_location: "read_csv('{{ var('wago_dir') }}/{{ var('wago_build') }}/{name}.csv', header=true, sample_size=-1)"
+    tables:
+      - name: AreaTable
+      - name: Map
+      - name: UiMap
+      - name: UiMapAssignment
+      - name: WorldMapOverlay
+      - name: AreaTrigger
+      - name: TaxiNodes
+      - name: TaxiPath
+      - name: ChrClasses
+      - name: ChrRaces
+      - name: Faction
+      - name: FactionTemplate
+      - name: ItemClass
+      - name: ItemSubClass
+      - name: ItemSet
+      - name: SkillLine
+      - name: QuestSort
+      - name: QuestInfo
+      - name: CreatureType
+      - name: CreatureFamily
+      - name: Languages

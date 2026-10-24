@@ -1,0 +1,8 @@
+school_mask,name
+1,Physical
+2,Holy
+4,Fire
+8,Nature
+16,Frost
+32,Shadow
+64,Arcane

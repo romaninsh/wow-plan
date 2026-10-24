@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=./page-schema-1.json
+title: Spells
+body:
+  - kind: binder
+    name: spells
+    observe: spell
+    params:
+      allow_add: false
+      default_sort: { column: spell_id, direction: asc }
+      columns:
+        spell_id: { label: ID, width: 70 }
+        name: { label: Spell, width: 240, pin: true }
+        rank: { label: Rank, width: 80 }
+        school:
+          label: School
+          labels: { "1": Physical, "2": Holy, "4": Fire, "8": Nature, "16": Frost, "32": Shadow, "64": Arcane }
+          color: { yellow: ["2"], red: ["4"], green: ["8"], cyan: ["16"], magenta: ["32", "64"] }
+        spell_level: { label: Level, width: 60 }
+        description: { label: Description, width: 480 }

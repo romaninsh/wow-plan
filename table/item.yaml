@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=./table-schema-1.json
+datasource: opendata
+title: Items
+table: client_items
+columns:
+  - { name: item_id, label: ID, type: int, flags: [id, searchable] }
+  - { name: name, label: Name, type: string, flags: [title, searchable] }
+  - { name: quality, label: Quality, type: int }
+  - { name: item_level, label: Item level, type: int }
+  - { name: required_level, label: Req. level, type: int }
+  - { name: item_class, label: Class, type: int }
+  - { name: item_subclass, label: Subclass, type: int }
+  - { name: inventory_type, label: Slot, type: int }
+  - { name: binding, label: Binding, type: int }
+  - { name: stackable, label: Stack, type: int }
+  - { name: stats, label: Stats, type: string }
+  - { name: armor, label: Armor, type: int }
+  - { name: damage, label: Damage, type: string }
+  - { name: spells, label: Spells, type: string }
+  - { name: sell_price, label: Sell price, type: int }
+  - { name: buy_price, label: Buy price, type: int }
+  - { name: set_id, label: Set, type: int }
+  - { name: description, label: Description, type: string }
+  - { name: confidence, label: Confidence, type: string }
+  - { name: build_last_seen, label: Build, type: string }

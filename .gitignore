@@ -1,0 +1,45 @@
+# --- managed by Vantage: generated files (do not edit this block)
+#
+# Vantage rewrites these on every open, from the running build.
+# Commit them and they go stale, and every version bump becomes a
+# diff nobody wrote.
+*/*-schema-*.json
+*/README.md
+/AGENTS.md
+
+# Machine-local, not content: the install record an app keeps so it
+# can update itself, the row caches, the credentials files (`.env`
+# and each profile's, like `.env.prod`), and the local data files the
+# connect wizard placed (CSV, SQLite).
+manifest.yaml
+.cache/
+.env
+.env.*
+data/
+.DS_Store
+# --- end managed by Vantage
+
+# Our own READMEs below Vantage folders (the block above ignores */README.md)
+!/dbt/README.md
+!/seeds/README.md
+
+# Vantage skills (managed and upgraded by Vantage, like AGENTS.md) and local agent settings
+.agents/
+.claude/skills/
+.claude/settings.local.json
+
+# Downloads: the opendata clone and wago.tools exports. Fetched again on every import.
+refs/
+
+# Python environment for dbt, and dbt's build output
+.venv/
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+dbt/.user.yml
+
+# Scratch: temporary files, brainstorming mockups
+tmp/
+scratch/
+*.tmp
+.superpowers/

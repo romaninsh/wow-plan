@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=./table-schema-1.json
+datasource: opendata
+title: Objects
+table: client_objects
+columns:
+  - { name: object_id, label: ID, type: int, flags: [id, searchable] }
+  - { name: name, label: Name, type: string, flags: [title, searchable] }
+  - { name: object_type, label: Type, type: int }
+  - { name: lock_type, label: Lock, type: int }
+  - { name: required_skill_id, label: Skill, type: int }
+  - { name: required_skill_rank, label: Skill rank, type: int }
+  - { name: display_id, label: Display ID, type: int }
+  - { name: confidence, label: Confidence, type: string }
+  - { name: build_last_seen, label: Build, type: string }

@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=./table-schema-1.json
+datasource: opendata
+title: Recipes
+table: client_recipes
+columns:
+  - { name: recipe_spell_id, label: ID, type: int, flags: [id, searchable] }
+  - { name: name, label: Name, type: string, flags: [title, searchable] }
+  - { name: skill_id, label: Profession, type: int }
+  - { name: skill_required, label: Skill, type: int }
+  - { name: skill_green, label: Green, type: int }
+  - { name: skill_gray, label: Gray, type: int }
+  - { name: creates, label: Creates, type: string }
+  - { name: reagents, label: Reagents, type: string }
+  - { name: tool_item_ids, label: Tools, type: string }
+  - name: taught_by_item_id
+    label: Taught by
+    type: int
+    references: { table: item, kind: has_one, name: taught_by }
+  - { name: cast_ms, label: Cast (ms), type: int }
+  - { name: confidence, label: Confidence, type: string }
+  - { name: build_last_seen, label: Build, type: string }

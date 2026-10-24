@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=./table-schema-1.json
+datasource: opendata
+title: Quests
+table: client_quests
+columns:
+  - { name: quest_id, label: ID, type: int, flags: [id, searchable] }
+  - { name: name, label: Name, type: string, flags: [title, searchable] }
+  - { name: quest_level, label: Level, type: int }
+  - { name: min_level, label: Min level, type: int }
+  - { name: zone_or_sort, label: Zone, type: int }
+  - { name: prev_quest_id, label: Previous quest, type: int }
+  - { name: next_quest_id, label: Next quest, type: int }
+  - { name: objectives, label: Objectives, type: string, flags: [searchable] }
+  - { name: description, label: Description, type: string }
+  - { name: objective_items, label: Objective items, type: string }
+  - { name: objective_npcs, label: Objective NPCs, type: string }
+  - { name: rewards, label: Rewards, type: string }
+  - { name: confidence, label: Confidence, type: string }
+  - { name: build_last_seen, label: Build, type: string }
