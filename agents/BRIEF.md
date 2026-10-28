@@ -37,7 +37,7 @@ Three layers:
 
 ## Editing plans (decided 2026-10-28)
 
-- **Main interaction is an AI agent over MCP** (built into vantage-server 1.9: it exposes the
+- **Main interaction is an AI agent over MCP** (built into vantage-server 1.10: it exposes the
   vista and calls our actions). Typical session: "good gear for a rogue at 20?" → the agent
   searches the reference data and names options (never ranks them); "Robes of Arugal drop in
   SFK, add for Lin" → one `add_target` action.
@@ -73,7 +73,7 @@ Three layers:
   - Rate limits: unlocking five tries then one per 5 s, per session and per address (a new
     session per guess doesn't help); new plans five then one per 20 s; each edit action 20
     then one a second.
-  - Built 2026-10-28 (branch `sessions-and-mcp`, vantage-server 1.9): `application.yaml`
+  - Built 2026-10-28 (branch `sessions-and-mcp`, vantage-server 1.10): `application.yaml`
     `session:`, the `plan_id` rule in `datasource/plans.yaml`, `api/wowplan.yaml` (plans by id,
     their parts only `via: plans`, every record read-only, the target actions, MCP at `/mcp`
     on the API's port, an API-wide `rate_limit` on tool calls and invokes),
@@ -82,7 +82,7 @@ Three layers:
     can't call another script action yet (VAN-546). Sessions are in memory: a server restart
     (or a scale-down to zero) locks every plan again.
 - **Order:** actions and Guides pages in the Vantage desktop first (full access there), then
-  the API/MCP and the web unlock once vantage-server 1.9 is out.
+  the API/MCP and the web unlock once vantage-server 1.10 is out.
 
 ## Data notes
 

@@ -1,3 +1,6 @@
+# Anonymous sessions, read-by-id entities, action limits and MCP need Vantage 1.10.
+min_vantage_version: "1.10.0"
+
 # The usual menu, pages in a stack: Back and breadcrumbs, like a mobile app (layout/admin.yaml).
 layout: admin
 home: plans
