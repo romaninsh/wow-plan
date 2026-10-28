@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router";
 import { observer, useCollection, useRecord } from "@vantage-ui/client/react";
 import { useDb } from "../db";
@@ -39,6 +39,11 @@ const Plan = observer(({ id }: { id: string }) => {
   const { value: plan, status } = useRecord(ref);
   const characters = useCollection(db.plan_characters.where({ plan_id: id }));
   const blocks = useCollection(db.plan_blocks.where({ plan_id: id }));
+  const targets = useCollection(db.plan_targets.where({ plan_id: id }));
+  // a plan made a moment ago: its key, for the AI prompt. Read on the first render, before
+  // Share takes it out of the history entry.
+  const location = useLocation();
+  const [newKey] = useState(() => (location.state as { editKey?: string } | null)?.editKey);
 
   // the padlock: whether this session unlocked the plan, as the server says
   const [unlocked, setUnlocked] = useState(false);
@@ -96,14 +101,12 @@ const Plan = observer(({ id }: { id: string }) => {
           ))}
         </section>
 
+        {targets.loadState !== "loading" && targets.items.length === 0 && (
+          <QuestPrompt id={id} editKey={newKey} characters={characters.items} />
+        )}
         {blocks.items.map((b) => (
           <Block key={b.id} block={b} />
         ))}
-        {blocks.loadState !== "loading" && blocks.items.length === 0 && (
-          <section className="block">
-            <p className="empty-page">This page of the plan is still blank.</p>
-          </section>
-        )}
       </div>
     </WhoContext.Provider>
     </AccessContext.Provider>
@@ -183,11 +186,46 @@ function Share({ id }: { id: string }) {
   );
 }
 
-function CopyLine({ text }: { text: string }) {
+/** A plan with no goals yet: a quest-giver's card asking the player to let their AI assistant
+ *  fill it in over wow-plan's MCP server (`/mcp` on this same host). */
+function QuestPrompt({ id, editKey, characters }: { id: string; editKey?: string; characters: readonly PlanCharacters[] }) {
+  const origin = window.location.origin;
+  const who = characters.map((c) => `${c.name}, a ${c.race_name} ${c.class_name}`).join(" and ");
+  const ask = `Fill my wow-plan ${origin}/p/${id} with goals for levelling ${who || "my character"}. `
+    + `Edit key: ${editKey ?? "<your edit key>"}.`;
+  return (
+    <section className="panel quest">
+      <span className="quest-mark" aria-hidden="true">!</span>
+      <div className="quest-body">
+        <h2 className="quest-title">A plan without goals</h2>
+        <p className="quest-text">
+          Let your AI assistant fill it in. Connect wow-plan to it as an MCP server, then ask it to plan
+          your way: it looks the items, zones and dungeons up in the game data and adds them here.
+        </p>
+        <ol className="quest-steps">
+          <li>
+            <span className="label">MCP server</span>
+            <CopyLine text={`${origin}/mcp`} />
+          </li>
+          <li>
+            <span className="label">In Claude Code</span>
+            <CopyLine text={`claude mcp add --transport http wow-plan ${origin}/mcp`} />
+          </li>
+          <li>
+            <span className="label">Then ask</span>
+            <CopyLine text={ask} wrap />
+          </li>
+        </ol>
+      </div>
+    </section>
+  );
+}
+
+function CopyLine({ text, wrap = false }: { text: string; wrap?: boolean }) {
   const [copied, setCopied] = useState(false);
   return (
     <span className="row">
-      <code className="grow mono" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{text}</code>
+      <code className="grow mono" style={wrap ? { whiteSpace: "normal" } : { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{text}</code>
       <button type="button" className="btn subtle" onClick={() => {
         void navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
       }}>{copied ? "Copied" : "Copy"}</button>
@@ -399,6 +437,18 @@ const KIND: Record<string, string> = {
 };
 const PURPOSE: Record<string, string> = { sell: "for the auction house", use: "to use", give: "to give" };
 
+/** Props that make text open an editor on click, Enter or Space, with no button of its own. */
+function editable(open: () => void, className = "") {
+  return {
+    className: `${className} editable`.trim(),
+    role: "button",
+    tabIndex: 0,
+    title: "Click to edit the notes",
+    onClick: open,
+    onKeyDown: (e: KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } },
+  };
+}
+
 const Target = observer(({ target: t }: { target: PlanTargets }) => {
   const db = useDb();
   const who = useContext(WhoContext);
@@ -434,16 +484,17 @@ const Target = observer(({ target: t }: { target: PlanTargets }) => {
         <span className={`tick ${done ? "done" : ""}`} />
       )}
       <div>
-        <div className="target-title">{t.title}</div>
+        {/* unlocked: a click on the notes edits them, and on the title of a to-do without notes
+            adds them; no button */}
+        <div {...(unlocked && notes === null && !t.notes ? editable(() => setNotes(""), "target-title") : { className: "target-title" })}>{t.title}</div>
         <div className="target-meta">
           <span className="kind">{KIND[t.kind ?? ""] ?? t.kind}</span>
           {ref && <GameRefLink value={ref} />}
           {t.count != null && t.count > 1 && <span className="tnum">×{t.count}</span>}
           {t.level != null && <span className="tnum">to {t.level}</span>}
           {t.purpose && <span>{t.purpose === "give" && forWho ? `for ${forWho}` : PURPOSE[t.purpose]}</span>}
-          {notes === null && t.notes && <span>{t.notes}</span>}
-          {unlocked && notes === null && (
-            <button type="button" className="btn subtle" onClick={() => setNotes(t.notes ?? "")}>{t.notes ? "Edit notes" : "Add notes"}</button>
+          {notes === null && t.notes && (
+            <span {...(unlocked ? editable(() => setNotes(t.notes ?? "")) : {})}>{t.notes}</span>
           )}
         </div>
         {notes !== null && (
