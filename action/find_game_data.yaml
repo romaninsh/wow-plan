@@ -52,23 +52,19 @@ body: |
     fail("slot, max_required_level and quality narrow items only");
   }
   let offset = if args.offset == () { 0 } else { args.offset.to_int() };
-  if offset < 0 || offset > 500 { fail("offset goes from 0 to 500; narrow the search instead"); }
+  if offset < 0 { fail("offset can't be negative"); }
   let spec = tables[kind];
   let q = table(spec[0]);
   if text.len() > 0 { q = q.where("name", "like", text); }
   if args.slot != () { q = q.where("slot_name", `${args.slot}`); }
   if args.max_required_level != () { q = q.where("required_level", "<=", args.max_required_level.to_int()); }
   if args.quality != () { q = q.where("quality", args.quality.to_int()); }
-  // Tables have no offset verb: read offset + 26 rows and skip the first `offset`.
-  let found = q.sort("name").limit(offset + 26).list();
+  let found = q.sort("name").offset(offset).limit(26).list();
   let rows = [];
-  let i = 0;
   for r in found {
-    i += 1;
-    if i <= offset { continue; }
     if rows.len() == 25 { break; }
     let row = #{};
     for c in spec[1] { if r[c] != () { row[c] = r[c]; } }
     rows.push(row);
   }
-  #{ rows: rows, more: found.len() > offset + 25 }
+  #{ rows: rows, more: found.len() > 25 }
