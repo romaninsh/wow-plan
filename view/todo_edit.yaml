@@ -1,0 +1,22 @@
+# yaml-language-server: $schema=./view-schema-1.json
+#
+# The To-dos page's drawer: the selected to-do's plain fields, edited in place with the
+# built-in record form (Save / Revert). Only scalar fields are offered: ref, place,
+# characters are embedded documents and arrays that a text field would turn into a string, so
+# they change only through the actions (Change reference or place, Move); done changes through
+# Tick done / Open again.
+# MongoDB's validator limits title to 1-200 characters and count to 1 or more; a failed save
+# shows the raw driver error, so the limits are stated above the form.
+args:
+  id: { type: string, required: true }
+body:
+  - kind: label
+    params:
+      text: "Title 1-200 characters, count 1 or more. Reference, place and characters: use the row actions."
+      style: muted
+  - kind: form
+    observe: plan_target
+    record: "${args.id}"
+    params:
+      id_column: _id
+      fields: [title, count, purpose, notes]

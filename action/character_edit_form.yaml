@@ -1,0 +1,53 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Desktop dialog for one character (update_character); opened with the character row. Dropdowns
+# can't show the current values: professions change only when "Change professions" is ticked,
+# and a blank start place keeps the current one.
+kind: form
+dialog:
+  title: "Edit ${row.name}"
+  description: "Professions now: ${row.primary_text}. Secondary: ${row.secondary_text}. Starts at: ${row.start_name}."
+  confirm_label: Save character
+  size: lg
+form:
+  fields:
+    - { name: name, type: string, label: Character name }
+    - { name: notes, type: string, label: Notes, multiline: true, required: false }
+    - { name: change_professions, type: bool, label: "Change professions", required: false, default: "false" }
+    - name: primary_1
+      type: string
+      label: "Profession 1"
+      required: false
+      widget: dropdown
+      option_label: name
+      options: |
+        table("skill_line").where("skill_line_id", "in", [164, 165, 171, 182, 186, 197, 202, 333, 393])
+    - name: primary_2
+      type: string
+      label: "Profession 2"
+      required: false
+      widget: dropdown
+      option_label: name
+      options: |
+        table("skill_line").where("skill_line_id", "in", [164, 165, 171, 182, 186, 197, 202, 333, 393])
+    - { name: secondary, type: string, label: Secondary skills, widget: checklist,
+        choices: [First Aid, Cooking, Fishing], required: false }
+    - { name: start_search, type: string, label: Find start place, required: false }
+    - name: start_zone
+      type: string
+      label: "New start: zone"
+      required: false
+      widget: dropdown
+      option_label: name
+      options: |
+        let s = form["start_search"];
+        if s == () { table("zone").limit(200) } else { table("zone").search(s).limit(50) }
+    - name: start_area
+      type: string
+      label: "New start: town or area"
+      required: false
+      widget: dropdown
+      option_label: name
+      options: |
+        let s = form["start_search"];
+        if s == () { table("area").where("area_id", 0) } else { table("area").search(s).limit(50) }

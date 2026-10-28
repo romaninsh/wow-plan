@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=./table-schema-1.json
+# A plan's characters with professions and start place as text: MongoDB view
+# `plan_character_rows` (mongo/views.js). Read-only; edits go through update_character.
+datasource: plans
+title: Plan characters
+table: plan_character_rows
+mongo: { view: true }
+columns:
+  - { name: _id, label: ID, type: string, flags: [id, hidden] }
+  - { name: plan_id, label: Plan, type: string, flags: [hidden] }
+  - { name: key, label: Key, type: string }
+  - { name: order, label: Order, type: int }
+  - { name: name, label: Character, type: string, flags: [title, searchable] }
+  - { name: race_name, label: Race, type: string }
+  - { name: class_name, label: Class, type: string }
+  - { name: primary_text, label: Professions, type: string }
+  - { name: secondary_text, label: Secondary skills, type: string }
+  - { name: start_name, label: Starts at, type: string }
+  - { name: notes, label: Notes, type: string }

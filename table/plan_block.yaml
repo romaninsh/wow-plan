@@ -1,5 +1,7 @@
 # yaml-language-server: $schema=./table-schema-1.json
-# A level range in a plan; every target in it must fit the range.
+# A level range (bracket) in a plan. Level fit is loose: a to-do's level only picks a bracket
+# when none is named (agents/BRIEF.md). No has_many to to-dos: they are only ever listed for one
+# plan, on its To-dos page.
 datasource: plans
 title: Level blocks
 table: plan_blocks
@@ -17,5 +19,3 @@ columns:
   # embedded array: not hidden, so the API's generated types include it
   - { name: zones, label: Zones, type: string }
   - { name: notes, label: Notes, type: string }
-references:
-  targets: { table: plan_target, kind: has_many, foreign_key: block_id }

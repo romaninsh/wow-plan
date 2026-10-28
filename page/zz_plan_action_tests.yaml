@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=./page-schema-1.json
+#
+# Test harness, not in the menu: one button runs tests/plan_actions.rhai, which calls every plan
+# editing action on a throwaway plan. MCP data scripts have no `actions`, so an agent presses
+# this button with ui_interact and reads the toast in list_logs. Page files aren't in the
+# production image (Dockerfile copies datasource, table, api and action only).
+# Editing only tests/plan_actions.rhai doesn't reload this page: save this file too, then reopen it.
+title: Plan action tests
+state:
+  report: "Not run yet"
+body:
+  - kind: button
+    name: run_tests
+    params:
+      label: "Run plan action tests"
+      icon: Play
+      action: !include ../tests/plan_actions.rhai
+  - kind: markdown
+    text: "${state.report}"

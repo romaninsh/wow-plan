@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Removes an empty level bracket. Args: block_id. A bracket with targets is refused (move or
+# remove them first). The plan's other brackets are renumbered 1..n. Returns #{ id }.
+#
+# Desktop only, not in api/wowplan.yaml (see add_target).
+kind: script
+dialog:
+  title: Remove bracket
+body: |
+  let block_id = if args.block_id == () { "" } else { `${args.block_id}` };
+  let b = if block_id == "" { () } else { table("plan_block").get(block_id) };
+  if b == () { throw "That bracket doesn't exist (any more)"; }
+
+  let n = table("plan_target").where("plan_id", b.plan_id).where("block_id", b._id).count();
+  if n > 0 {
+    throw `The ${b.min_level}-${b.max_level} bracket still has ${n} target${if n == 1 { "" } else { "s" }}; move or remove ${if n == 1 { "it" } else { "them" }} first`;
+  }
+
+  table("plan_block").delete(b._id);
+  // closing the gap: each order moves down into a free slot, so the unique index holds
+  let i = 0;
+  for o in table("plan_block").where("plan_id", b.plan_id).sort("order").list() {
+    i += 1;
+    if o.order != i { table("plan_block").patch(o._id, #{ order: i }); }
+  }
+  table("plan").patch(b.plan_id, #{ updated_at: `${now()}` });
+
+  #{ id: b._id }

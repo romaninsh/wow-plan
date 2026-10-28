@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Desktop dialog for a new level bracket (add_block) and for changing one (update_block,
+# opened with the bracket row, which fills the fields).
+kind: form
+dialog:
+  title: "Level bracket"
+  description: "Levels 1-60. Brackets may share one edge level (10-20 and 20-30) but not overlap."
+  confirm_label: Save bracket
+  size: sm
+form:
+  fields:
+    - { name: min_level, type: int, label: From level, placeholder: "1" }
+    - { name: max_level, type: int, label: To level, placeholder: "10" }
+    - { name: title, type: string, label: Title, placeholder: "e.g. Brill, Tirisfal", required: false }

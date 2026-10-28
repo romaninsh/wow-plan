@@ -1,0 +1,395 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Shared checks for add_target, update_target, move_target and update_block; it writes nothing.
+# Callers pass the target fields as add_target takes them, plus `plan_id` and, for an existing
+# target, `current` (its stored document). Returns
+#   #{ plan_id, block_id, level, level_note, fields }
+# where `fields` is what to write, `level` the character level that decides the bracket and
+# `level_note` a sentence when the target's level and its bracket disagree (else ()).
+# With `level_only: true` it returns #{ level } as soon as that level is known.
+#
+# The level that decides the bracket (a level the target needs, never a recommendation):
+#   acquire_item, craft_item  the item's required_level; none when it is 0 (usable at any level).
+#                             item_level is not a character level, so it is never used.
+#   complete_quest            the quest's min_level, else its quest_level; none without a quest
+#   run_dungeon, zone         the dungeon's or zone's min_level
+#   area (travel_to_zone)     the area's exploration_level when above 0, else none
+#   reach_level               its level
+#   reach_profession_level, note   none
+# Level fit is loose, not a rule (agents/BRIEF.md): a block_id given is always accepted, even
+# for an item the character can't equip yet or a trip back to a low-level zone; the agent
+# building the plan decides. When the level disagrees with the bracket (a needed level above
+# its max_level, a level to reach outside min-max), `level_note` says so and nothing is refused.
+# Without a block_id, a target with a level goes in the bracket that covers it, and one with
+# no deciding level (a note, a profession) must name one. On a shared edge (1-10 and 10-20) a
+# needed level goes in the bracket it starts (an item at 10: 10-20) and a level to reach in the
+# one it ends ("Reach level 10": 1-10); first by order when that still leaves a choice; a needed
+# level below every bracket goes in the first one.
+# `level_only: true` returns #{ level, kind } for update_block, which applies the same rule.
+#
+# Not in api/wowplan.yaml: the desktop has full access; 1.10 sessions will gate edits.
+kind: script
+dialog:
+  title: Check a target
+body: |
+  fn text_of(v) {
+    if v == () { return (); }
+    let s = `${v}`;
+    s.trim();
+    if s.len() == 0 { () } else { s }
+  }
+  fn int_of(v, what) {
+    if v == () { return (); }
+    let t = type_of(v);
+    if t == "i64" { return v; }
+    if t == "f64" {
+      if v == v.to_int() { return v.to_int(); }
+      throw `${what} must be a whole number`;
+    }
+    if t == "string" {
+      let s = v;
+      s.trim();
+      if s.len() == 0 { return (); }
+      for i in 0..s.len() { if !"0123456789".contains(s.sub_string(i, 1)) { throw `${what} must be a whole number`; } }
+      if s.len() > 9 { throw `${what} is too large`; }
+      return parse_int(s);
+    }
+    throw `${what} must be a whole number`;
+  }
+  // a needed level (an item, a quest, a dungeon, an area) fits any bracket that reaches it: you
+  // can still do it later. A level to reach fits a bracket that covers it.
+  fn fits(kind, fit, b) {
+    if fit == () { return true; }
+    if kind == "reach_level" { fit >= b.min_level && fit <= b.max_level } else { fit <= b.max_level }
+  }
+  fn ranges_of(blocks) {
+    let out = "";
+    for b in blocks {
+      if out.len() > 0 { out += ", "; }
+      out += `${b.min_level}-${b.max_level}`;
+    }
+    if out.len() == 0 { "no brackets yet" } else { out }
+  }
+  fn default_title(kind, ref, level) {
+    if kind == "reach_level" { return if level == () { () } else { `Reach level ${level}` }; }
+    if ref == () { return (); }
+    if kind == "reach_profession_level" { return if level == () { ref.name } else { `${ref.name} ${level}` }; }
+    ref.name
+  }
+  fn same_place(a, b) {
+    if a == () || b == () { return false; }
+    for k in ["zone_id", "lfg_dungeon_id", "area_id"] {
+      if (k in a) && (k in b) && a[k] == b[k] { return true; }
+    }
+    false
+  }
+  // one game reference by id: #{ ref, level } with the name snapshot, or a plain-English throw
+  fn look_up(field, id) {
+    if field == "item_id" {
+      let i = table("item").get(id);
+      if i == () { throw `There is no item ${id} in the game data`; }
+      let r = #{ item_id: i.item_id, name: i.name };
+      if i.quality != () { r.quality = i.quality; }
+      let lvl = if i.required_level != () && i.required_level > 0 { i.required_level } else { () };
+      return #{ ref: r, level: lvl };
+    }
+    if field == "quest_id" {
+      let q = table("quest").get(id);
+      if q == () { throw `There is no quest ${id} in the game data; leave the quest out and give the target a title instead`; }
+      let lvl = if q.min_level != () && q.min_level > 0 { q.min_level } else if q.quest_level != () && q.quest_level > 0 { q.quest_level } else { () };
+      return #{ ref: #{ quest_id: q.quest_id, name: q.name }, level: lvl };
+    }
+    if field == "zone_id" {
+      let z = table("zone").get(id);
+      if z == () { throw `There is no zone ${id} in the game data`; }
+      let lvl = if z.min_level != () && z.min_level > 0 { z.min_level } else { () };
+      return #{ ref: #{ zone_id: z.zone_id, name: z.name }, level: lvl };
+    }
+    if field == "area_id" {
+      let a = table("area").get(id);
+      if a == () { throw `There is no area ${id} in the game data`; }
+      let lvl = if a.exploration_level != () && a.exploration_level > 0 { a.exploration_level } else { () };
+      return #{ ref: #{ area_id: a.area_id, name: a.name }, level: lvl };
+    }
+    if field == "lfg_dungeon_id" {
+      let d = table("dungeon").get(id);
+      if d == () { throw `There is no dungeon ${id} in the game data`; }
+      let lvl = if d.min_level != () && d.min_level > 0 { d.min_level } else { () };
+      return #{ ref: #{ lfg_dungeon_id: d.lfg_dungeon_id, name: d.name }, level: lvl };
+    }
+    if field == "skill_line_id" {
+      let s = table("skill_line").get(id);
+      if s == () { throw `There is no skill ${id} in the game data`; }
+      if s.category != "Profession" && s.category != "Secondary" { throw `${s.name} isn't a profession`; }
+      return #{ ref: #{ skill_line_id: s.skill_line_id, name: s.name }, level: () };
+    }
+    throw `Unknown reference ${field}`;
+  }
+
+  let label_of = #{
+    travel_to_zone: "travel", acquire_item: "item", complete_quest: "quest",
+    reach_profession_level: "profession", craft_item: "crafting", run_dungeon: "dungeon",
+    reach_level: "character level", note: "note",
+  };
+  let refs_for = #{
+    travel_to_zone: ["zone_id", "area_id"], acquire_item: ["item_id"], complete_quest: ["quest_id"],
+    reach_profession_level: ["skill_line_id"], craft_item: ["item_id", "recipe_spell_id"],
+    run_dungeon: ["lfg_dungeon_id"], reach_level: [], note: [],
+  };
+
+  // ── plan and current target ──────────────────────────────────────────────────────────────
+  let plan_id = text_of(args.plan_id);
+  if plan_id == () { throw "Say which plan"; }
+  let plan = table("plan").get(plan_id);
+  if plan == () { throw `There is no plan ${plan_id}`; }
+  let cur = args.current;
+  let is_new = cur == ();
+
+  let kind = if is_new { text_of(args.kind) } else { cur.kind };
+  if !is_new && args.kind != () && text_of(args.kind) != cur.kind {
+    throw "A target's kind can't change; remove it and add a new one";
+  }
+  if kind == () {
+    throw "Say what kind of target it is: travel_to_zone, acquire_item, complete_quest, reach_profession_level, craft_item, run_dungeon, reach_level or note";
+  }
+  if !(kind in label_of) {
+    throw `"${kind}" isn't a kind of target; use travel_to_zone, acquire_item, complete_quest, reach_profession_level, craft_item, run_dungeon, reach_level or note`;
+  }
+  let what = label_of[kind];
+
+  // ── the game reference ───────────────────────────────────────────────────────────────────
+  let ref = if is_new { () } else { cur.ref };
+  let fit = ();
+  let ref_changed = is_new || args.ref != ();
+  if ref_changed {
+    let given = if args.ref == () { #{} } else { args.ref };
+    if type_of(given) != "map" { throw "Give the reference as a game id, for example item_id: 6324"; }
+    let allowed = refs_for[kind];
+    let ids = #{};
+    for k in given.keys() {
+      if k == "name" || k == "quality" { continue; }
+      if !allowed.contains(k) {
+        if allowed.len() == 0 { throw `A ${what} target doesn't refer to game data`; }
+        throw `A ${what} target can't refer to ${k}; it takes ${allowed[0]}${if allowed.len() > 1 { " or " + allowed[1] } else { "" }}`;
+      }
+      let n = int_of(given[k], k);
+      if n == () { continue; }
+      if n < 1 { throw `${k} must be a game id`; }
+      ids[k] = n;
+    }
+    if kind == "travel_to_zone" {
+      if ids.len() != 1 { throw "A travel target needs a zone_id or an area_id"; }
+      let k = ids.keys()[0];
+      let r = look_up(k, ids[k]);
+      ref = r.ref; fit = r.level;
+    } else if kind == "acquire_item" || kind == "run_dungeon" || kind == "reach_profession_level" {
+      let k = allowed[0];
+      if !(k in ids) { throw `A ${what} target needs ${k}`; }
+      let r = look_up(k, ids[k]);
+      ref = r.ref; fit = r.level;
+    } else if kind == "complete_quest" {
+      if "quest_id" in ids {
+        let r = look_up("quest_id", ids.quest_id);
+        ref = r.ref; fit = r.level;
+      } else if !is_new && cur.ref != () {
+        // the stored link can't be unset by a patch; refuse rather than report a change that didn't happen
+        throw "A quest target can't drop its quest; remove the target and add a new one with just a title";
+      } else { ref = (); }
+    } else if kind == "craft_item" {
+      let item_id = ids.item_id;
+      let rec = ();
+      if "recipe_spell_id" in ids {
+        rec = table("recipe").get(ids.recipe_spell_id);
+        if rec == () { throw `There is no recipe ${ids.recipe_spell_id} in the game data`; }
+        if rec.creates_item_id == () { throw `${rec.name} doesn't make an item`; }
+        if item_id == () { item_id = rec.creates_item_id; }
+        if rec.creates_item_id != item_id { throw `${rec.name} doesn't make item ${item_id}`; }
+      }
+      if item_id == () { throw "A crafting target needs item_id or recipe_spell_id"; }
+      let r = look_up("item_id", item_id);
+      ref = r.ref; fit = r.level;
+      if rec != () { ref.recipe_spell_id = rec.recipe_spell_id; }
+    } else {
+      ref = ();
+    }
+  } else if ref != () {
+    // unchanged reference: the level from today's data; a removed id just has no level
+    for k in ["item_id", "quest_id", "zone_id", "area_id", "lfg_dungeon_id"] {
+      if k in ref {
+        try { fit = look_up(k, ref[k]).level; } catch (e) { fit = (); }
+        break;
+      }
+    }
+  }
+
+  // ── level ────────────────────────────────────────────────────────────────────────────────
+  let level = if args.level != () { int_of(args.level, "The level") } else if is_new { () } else { cur.level };
+  if kind == "reach_level" {
+    if level == () { throw "Say which character level to reach"; }
+    if level < 1 || level > 60 { throw "Character levels go from 1 to 60"; }
+    fit = level;
+  } else if kind == "reach_profession_level" {
+    if level == () { throw "Say which profession level to reach"; }
+    if level < 1 || level > 300 { throw "Profession levels go from 1 to 300"; }
+  } else if args.level != () {
+    throw "Only character-level and profession targets take a level";
+  }
+  if args.level_only == true { return #{ level: fit, kind: kind }; }
+
+  // ── count, purpose, for_character, notes ─────────────────────────────────────────────────
+  let count = if args.count != () { int_of(args.count, "The count") } else if is_new { () } else { cur.count };
+  if args.count != () {
+    if !["acquire_item", "craft_item", "run_dungeon"].contains(kind) { throw `A ${what} target has no count`; }
+    if count == () || count < 1 || count > 1000 { throw "The count goes from 1 to 1000"; }
+  }
+
+  let chars = table("plan_character").where("plan_id", plan_id).sort("order").list();
+  let char_names = "";
+  for c in chars { if char_names.len() > 0 { char_names += " and "; } char_names += `${c.name} (${c.key})`; }
+  let find_char = |who| {
+    let w = `${who}`.to_lower();
+    w.trim();
+    // the same lookup in every action: an exact key first, then a name (case-insensitive)
+    for c in chars { if c.key == w { return c.key; } }
+    for c in chars { if c.name.to_lower() == w { return c.key; } }
+    throw `This plan has no character "${who}"; its characters are ${char_names}`;
+  };
+
+  let purpose = if is_new { () } else { cur.purpose };
+  if "purpose" in args {
+    if kind != "craft_item" && kind != "acquire_item" { throw `A ${what} target has no purpose`; }
+    purpose = text_of(args.purpose);
+    if purpose != () {
+      purpose = purpose.to_lower();
+      if !["sell", "use", "give"].contains(purpose) { throw "The purpose is sell, use or give"; }
+    }
+  }
+  let for_character = if is_new { () } else { cur.for_character };
+  if "for_character" in args {
+    if kind != "craft_item" && kind != "acquire_item" { throw `A ${what} target isn't for a character`; }
+    let f = text_of(args.for_character);
+    for_character = if f == () { () } else { find_char.call(f) };
+  }
+  let notes = if is_new { () } else { cur.notes };
+  if "notes" in args {
+    notes = text_of(args.notes);
+    if notes != () && notes.len() > 1000 { throw "The notes are too long (1000 characters at most)"; }
+  }
+
+  // ── characters: keys or names; empty = everyone ──────────────────────────────────────────
+  let characters = if is_new { [] } else { cur.characters ?? [] };
+  if "characters" in args {
+    let given = args.characters;
+    if type_of(given) == "string" { given = if text_of(given) == () { [] } else { [given] }; }
+    if type_of(given) != "array" { throw "Give the characters as a list of names"; }
+    characters = [];
+    for g in given {
+      let k = find_char.call(g);
+      if !characters.contains(k) { characters.push(k); }
+    }
+  }
+
+  // ── title ────────────────────────────────────────────────────────────────────────────────
+  // defaults: the snapshot name, "Reach level 20", "Tailoring 75". An edit keeps a title the
+  // player wrote and refreshes one that was the default.
+  let title = text_of(args.title);
+  if title == () {
+    let fresh = default_title(kind, ref, level);
+    if is_new {
+      title = fresh;
+    } else {
+      title = if cur.title == default_title(kind, cur.ref, cur.level) && fresh != () { fresh } else { cur.title };
+    }
+    if title == () {
+      if kind == "note" { throw "Give the note a title"; }
+      throw "Give the target a title";
+    }
+  }
+  if title.len() > 200 { throw "The title is too long (200 characters at most)"; }
+
+  // ── place: a zone, dungeon or area, never free text ──────────────────────────────────────
+  let place = if is_new { () } else { cur.place };
+  if "place" in args {
+    let p = args.place;
+    if type_of(p) != "map" { throw "Give the place as zone_id, lfg_dungeon_id or area_id, for example lfg_dungeon_id: 7"; }
+    let ids = #{};
+    for k in p.keys() {
+      if k == "name" { continue; }
+      if !["zone_id", "lfg_dungeon_id", "area_id"].contains(k) { throw `A place is a zone, dungeon or area; ${k} isn't one of them`; }
+      let n = int_of(p[k], k);
+      if n != () { ids[k] = n; }
+    }
+    if ids.len() > 1 { throw "A place is one zone, dungeon or area, not several"; }
+    if ids.len() == 0 {
+      // only an empty map clears the place; a name or an empty id on its own is refused
+      if p.keys().len() > 0 { throw "Pick the place as a zone, dungeon or area from the game data, for example lfg_dungeon_id: 7; a name on its own isn't enough"; }
+      place = ();
+    } else {
+      let k = ids.keys()[0];
+      place = look_up(k, ids[k]).ref;
+    }
+  } else if ref_changed && (kind == "run_dungeon" || kind == "travel_to_zone") && ref != () {
+    // default place: the dungeon or zone itself (for an edit, only if it was the old default)
+    let was_default = is_new || place == () || same_place(place, cur.ref);
+    if was_default { place = ref; }
+  }
+
+  // ── bracket ──────────────────────────────────────────────────────────────────────────────
+  let blocks = table("plan_block").where("plan_id", plan_id).sort("order").list();
+  let ranges = ranges_of(blocks);
+  if blocks.len() == 0 { throw "This plan has no level brackets yet; add one first"; }
+  let block_id = if args.block_id != () { text_of(args.block_id) } else if is_new { () } else { cur.block_id };
+  let block = ();
+  if block_id != () {
+    for b in blocks { if b._id == block_id { block = b; } }
+    if block == () { throw `That bracket isn't part of this plan; this plan has ${ranges}`; }
+    // a bracket the caller names is always accepted: players get items they can't equip yet
+    // and go back to low-level zones. A mismatch only comes back as a note (below).
+  } else {
+    if fit == () { throw `Say which bracket "${title}" goes in; this plan has ${ranges}`; }
+    // brackets share edge levels (1-10, 10-20). A level a target needs (an item, a quest, a
+    // dungeon) starts a bracket: 20 goes in 20-30. A level to reach ends one: "Reach level 10"
+    // goes in 1-10. Then the first bracket by order that covers it; a needed level below every
+    // bracket goes in the first one.
+    for b in blocks {
+      let inside = if kind == "reach_level" { fit > b.min_level && fit <= b.max_level } else { fit >= b.min_level && fit < b.max_level };
+      if inside { block = b; break; }
+    }
+    if block == () {
+      for b in blocks {
+        if fit >= b.min_level && fit <= b.max_level { block = b; break; }
+      }
+    }
+    if block == () && kind != "reach_level" {
+      for b in blocks { if fits(kind, fit, b) { block = b; break; } }
+    }
+    if block == () { throw `No bracket covers level ${fit}; say which bracket it goes in (this plan has ${ranges})`; }
+  }
+
+  // not a rule, a hint for whoever builds the plan (the agent can mention it to the player)
+  let level_note = ();
+  if !fits(kind, fit, block) {
+    level_note = if kind == "reach_level" {
+      `level ${fit} is outside the ${block.min_level}-${block.max_level} bracket`
+    } else {
+      `"${title}" needs level ${fit}, above the ${block.min_level}-${block.max_level} bracket`
+    };
+  }
+
+  // the place as one flat value pages can filter on (a dotted filter on `place` matches nothing
+  // in Vantage's cache); mongo/seed.js writes it the same way
+  let place_key = if place == () { "none" }
+    else if "lfg_dungeon_id" in place { `dungeon:${place.lfg_dungeon_id}` }
+    else if "zone_id" in place { `zone:${place.zone_id}` }
+    else { `area:${place.area_id}` };
+  let fields = #{
+    kind: kind, title: title, characters: characters, place: place,
+    place_key: place_key,
+    purpose: purpose, for_character: for_character, notes: notes, block_id: block._id,
+  };
+  // a new to-do starts open; an edit leaves done as it is (tick_target changes it)
+  if is_new { fields.done = false; }
+  if ref != () { fields.ref = ref; }
+  if count != () { fields.count = count; }
+  if level != () { fields.level = level; }
+  #{ plan_id: plan_id, block_id: block._id, block_order: block.order, level: fit, level_note: level_note, fields: fields }

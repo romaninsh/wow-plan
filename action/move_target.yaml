@@ -1,0 +1,87 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Moves a target to another bracket and/or position. Args: target_id, block_id? (default: its
+# own bracket), order? (1 = first; past the end = last; default: last when the bracket changes,
+# else where it is). Any bracket of the plan is accepted; level_note says when the target's
+# level disagrees with it (resolve_target). Both brackets are renumbered 1..n. The target keeps
+# its id. Returns #{ id, block_id, order, level_note }.
+#
+# Desktop only, not in api/wowplan.yaml (see add_target).
+kind: script
+dialog:
+  title: Move target
+body: |
+  fn plain(e) {
+    let s = `${e}`;
+    loop {
+      let changed = false;
+      if s.starts_with("actions.") {
+        let i = s.index_of(": ");
+        if i > 0 { s = s.sub_string(i + 2, s.len() - i - 2); changed = true; }
+      }
+      if s.starts_with("Runtime error: ") { s = s.sub_string(15, s.len() - 15); changed = true; }
+      if !changed { break; }
+    }
+    let i = s.index_of(" (line ");
+    if i > 0 { s = s.sub_string(0, i); }
+    s
+  }
+
+  let target_id = if args.target_id == () { "" } else { `${args.target_id}` };
+  let t = if target_id == "" { () } else { table("plan_target").get(target_id) };
+  if t == () { throw "That target doesn't exist (any more)"; }
+
+  let block_id = if args.block_id == () { t.block_id } else { `${args.block_id}` };
+  let r = ();
+  try {
+    r = actions.resolve_target(#{ plan_id: t.plan_id, current: t, block_id: block_id });
+  } catch (e) { throw plain(e); }
+
+  let pos = ();
+  if args.order != () {
+    let o = args.order;
+    if type_of(o) == "string" {
+      for i in 0..o.len() { if !"0123456789".contains(o.sub_string(i, 1)) { throw "The position must be a whole number"; } }
+      o = if o.len() == 0 || o.len() > 6 { 0 } else { parse_int(o) };
+    } else if type_of(o) == "f64" {
+      if o != o.to_int() { throw "The position must be a whole number"; }
+      o = o.to_int();
+    }
+    if type_of(o) != "i64" || o < 1 { throw "The position starts at 1"; }
+    pos = o;
+  }
+
+  let others = [];
+  for o in table("plan_target").where("plan_id", t.plan_id).where("block_id", block_id).sort("order").list() {
+    if o._id != t._id { others.push(o); }
+  }
+  let at = if pos != () { pos.min(others.len() + 1) } else if block_id == t.block_id {
+    // where it is now
+    let k = 1;
+    for o in others { if o.order != () && t.order != () && o.order < t.order { k += 1; } }
+    k
+  } else { others.len() + 1 };
+
+  let i = 0;
+  let placed = false;
+  for o in others {
+    i += 1;
+    if i == at && !placed {
+      table("plan_target").patch(t._id, #{ block_id: block_id, order: i });
+      placed = true;
+      i += 1;
+    }
+    if o.order != i { table("plan_target").patch(o._id, #{ order: i }); }
+  }
+  if !placed { i += 1; table("plan_target").patch(t._id, #{ block_id: block_id, order: i }); }
+
+  if block_id != t.block_id {
+    let j = 0;
+    for o in table("plan_target").where("plan_id", t.plan_id).where("block_id", t.block_id).sort("order").list() {
+      j += 1;
+      if o.order != j { table("plan_target").patch(o._id, #{ order: j }); }
+    }
+  }
+  table("plan").patch(t.plan_id, #{ updated_at: `${now()}` });
+
+  #{ id: t._id, block_id: block_id, order: at, level_note: r.level_note }

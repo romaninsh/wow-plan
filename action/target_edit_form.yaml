@@ -1,0 +1,49 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Desktop dialog to change a target; opened with the target row, which fills the fields.
+# Dropdowns can't show the current value, so a blank place keeps the current one; tick
+# "No place" to clear it. The bracket is changed with Move.
+kind: form
+dialog:
+  title: "Edit ${row.title}"
+  confirm_label: Save to-do
+  size: lg
+form:
+  fields:
+    - { name: plan_id, type: string, label: Plan link, readonly: true }
+    - { name: title, type: string, label: To-do }
+    - { name: who, type: string, label: "Who (names, comma-separated, or Everyone)", required: false }
+    - { name: count, type: int, label: How many, required: false }
+    - { name: level, type: int, label: Level, required: false }
+    - { name: purpose, type: string, label: "What for", choices: [use, sell, give], required: false }
+    - { name: place_name, type: string, label: Current place, readonly: true, required: false }
+    - { name: place_search, type: string, label: Find another place, required: false }
+    - name: place_zone
+      type: string
+      label: "New place: zone"
+      required: false
+      widget: dropdown
+      option_label: name
+      options: |
+        let s = form["place_search"];
+        if s == () { table("zone").limit(200) } else { table("zone").search(s).limit(50) }
+    - name: place_area
+      type: string
+      label: "New place: town or area"
+      required: false
+      widget: dropdown
+      option_label: name
+      options: |
+        let s = form["place_search"];
+        if s == () { table("area").where("area_id", 0) } else { table("area").search(s).limit(50) }
+    - name: place_dungeon
+      type: string
+      label: "New place: dungeon"
+      required: false
+      widget: dropdown
+      option_label: name
+      options: |
+        let s = form["place_search"];
+        if s == () { table("dungeon").limit(100) } else { table("dungeon").search(s).limit(50) }
+    - { name: clear_place, type: bool, label: "No place", required: false, default: "false" }
+    - { name: notes, type: string, label: Notes, multiline: true, required: false }

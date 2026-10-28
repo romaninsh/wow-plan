@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Applies the guides database's validators and indexes (mongo/schema.js) and re-creates the
+# read-only views the desktop plan pages read (mongo/views.js) on the active profile's target:
+# mongo/guides.sh <target> schema. Deletes no documents. Run it after changing either file.
+# Called as actions.update_guides_schema(#{ target: profile.target }).
+kind: terminal
+description: |
+  Update the guides database's rules, indexes and views on target "${row.target}". No plan is
+  changed or deleted.
+dialog:
+  title: "Update guides schema on ${row.target}"
+terminal:
+  # `sh <script>`: a project script as `command:` itself fails with "failed to start command:
+  # spawn command" (see FEEDBACK.md)
+  command: sh
+  args: ["mongo/guides.sh", "${row.target}", "schema"]

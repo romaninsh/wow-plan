@@ -1,0 +1,64 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Changes a target. Args: target_id and any of add_target's fields (ref, title, characters,
+# count, level, purpose, for_character, notes, block_id, place). Absent fields stay as they are.
+# To clear: notes "", purpose "", for_character "", place #{} (no place), characters [] (everyone).
+# A game reference can be replaced but not removed (a quest target keeps its quest; remove the
+# target and add a new one with just a title). A place map with no usable id is refused.
+# The kind can't change (remove the target and add a new one). Level fit is never refused;
+# level_note says when the level disagrees with the bracket (resolve_target). A title that was
+# the default (the snapshot name, "Reach level 20") follows a new reference or level; a title
+# the player wrote stays. Moving to another bracket puts the target last there and renumbers
+# the old one. Returns #{ id, block_id, place, level_note }.
+#
+# Desktop only, not in api/wowplan.yaml (see add_target).
+kind: script
+dialog:
+  title: Change target
+body: |
+  fn plain(e) {
+    let s = `${e}`;
+    loop {
+      let changed = false;
+      if s.starts_with("actions.") {
+        let i = s.index_of(": ");
+        if i > 0 { s = s.sub_string(i + 2, s.len() - i - 2); changed = true; }
+      }
+      if s.starts_with("Runtime error: ") { s = s.sub_string(15, s.len() - 15); changed = true; }
+      if !changed { break; }
+    }
+    let i = s.index_of(" (line ");
+    if i > 0 { s = s.sub_string(0, i); }
+    s
+  }
+
+  let target_id = if args.target_id == () { "" } else { `${args.target_id}` };
+  let t = if target_id == "" { () } else { table("plan_target").get(target_id) };
+  if t == () { throw "That target doesn't exist (any more)"; }
+
+  let input = args;
+  input.plan_id = t.plan_id;
+  input.current = t;
+  let r = ();
+  try { r = actions.resolve_target(input); } catch (e) { throw plain(e); }
+
+  let patch = r.fields;
+  let moved = r.block_id != t.block_id;
+  if moved {
+    let last = 0;
+    for o in table("plan_target").where("plan_id", t.plan_id).where("block_id", r.block_id).list() {
+      if o.order != () && o.order > last { last = o.order; }
+    }
+    patch.order = last + 1;
+  }
+  table("plan_target").patch(t._id, patch);
+  if moved {
+    let i = 0;
+    for o in table("plan_target").where("plan_id", t.plan_id).where("block_id", t.block_id).sort("order").list() {
+      i += 1;
+      if o.order != i { table("plan_target").patch(o._id, #{ order: i }); }
+    }
+  }
+  table("plan").patch(t.plan_id, #{ updated_at: `${now()}` });
+
+  #{ id: t._id, block_id: r.block_id, place: patch.place, level_note: r.level_note }

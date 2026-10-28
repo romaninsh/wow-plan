@@ -15,6 +15,13 @@ body:
       - kind: stat
         observe: item
         params: { label: Items, icon: Gem }
+  # which databases the buttons below act on: TARGET in the active profile's env file
+  - kind: label
+    when: 'profile.target == "prod"'
+    params: { text: "Profile prod: Import build and the guides buttons change PRODUCTION (Cloud SQL and Atlas).", icon: TriangleAlert, style: heading }
+  - kind: label
+    when: 'profile.target != "prod"'
+    params: { text: "Profile ${profile.target}: the buttons below act on the local databases.", style: muted }
   - kind: row
     children:
       - kind: button
@@ -31,7 +38,21 @@ body:
           style: primary
           # language=rhai
           action: |
-            actions.import_build();
+            actions.import_build(#{ target: profile.target, build: "" });
+      - kind: button
+        params:
+          label: "Roll back import"
+          icon: Undo2
+          # language=rhai
+          action: |
+            actions.rollback_import(#{ target: profile.target });
+      - kind: button
+        params:
+          label: "Update guides schema"
+          icon: Settings2
+          # language=rhai
+          action: |
+            actions.update_guides_schema(#{ target: profile.target });
       - kind: button
         params:
           label: "Setup guide"
@@ -49,5 +70,11 @@ body:
       data, then swaps the new tables in. If a test fails nothing changes and the terminal says
       why. The previous build stays in schema `wow_prev` for one import.
 
+      **Roll back import** puts that previous import back live in one step (a second click
+      undoes it): the quick way out when a new client build turns out broken. To go further
+      back, **Re-import** an older run on the Import history page; it rebuilds from that build's
+      fetched files with today's transforms and the current opendata.
+
       Quests, NPCs and objects come from players' game caches (the opendata project) and only
-      cover what someone has seen so far.
+      cover what someone has seen so far. Every import and rollback is listed on the
+      **Import history** page.

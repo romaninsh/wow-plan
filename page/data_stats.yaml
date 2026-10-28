@@ -1,0 +1,88 @@
+# yaml-language-server: $schema=./page-schema-1.json
+#
+# What the live build contains, to spot missing data: row counts per kind of data, and how
+# items, quests, zones, dungeons, areas and recipes spread over level brackets (table
+# data_coverage, the dbt mart of the same name, rebuilt with every import). Under the prod
+# profile it shows production.
+title: Data stats
+body:
+  - kind: row
+    children:
+      - kind: label
+        params: { text: "What build ${profile.target} holds", style: heading, icon: ChartBar }
+  - kind: row
+    children:
+      - kind: stat
+        observe: build_info
+        params: { label: Build, column: build, icon: Database, color: blue }
+      - kind: stat
+        observe: item
+        params: { label: Items, icon: Gem }
+      - kind: stat
+        observe: quest
+        params: { label: Quests, icon: BookOpen }
+      - kind: stat
+        observe: npc
+        params: { label: NPCs, icon: Users }
+      - kind: stat
+        observe: game_object
+        params: { label: Objects, icon: Box }
+      - kind: stat
+        observe: recipe
+        params: { label: Recipes, icon: Hammer }
+  - kind: row
+    children:
+      - kind: stat
+        observe: map
+        params: { label: Maps, icon: Map }
+      - kind: stat
+        observe: zone
+        params: { label: Zones, icon: Map }
+      - kind: stat
+        observe: area
+        params: { label: Areas, icon: MapPin }
+      - kind: stat
+        observe: dungeon
+        params: { label: Dungeons, icon: Landmark }
+      - kind: stat
+        observe: spell
+        params: { label: Spells, icon: Sparkles }
+      - kind: stat
+        observe: item_set
+        params: { label: Item sets, icon: Layers }
+
+  - kind: divider
+    label: By level bracket
+  - kind: row
+    children:
+      - kind: column
+        frame: true
+        children:
+          - kind: chart
+            observe: data_coverage
+            height: 220
+            params: { x: bracket, y: items, chart_type: bar, label: "Items by required level", value_labels: true }
+      - kind: column
+        frame: true
+        children:
+          - kind: chart
+            observe: data_coverage
+            height: 220
+            params: { x: bracket, y: quests, chart_type: bar, label: "Quests by level (seen by players so far)", value_labels: true }
+  - kind: grid
+    name: coverage
+    observe: data_coverage
+    params:
+      default_sort: { column: bracket_order, direction: asc }
+      columns:
+        bracket: { label: Levels, width: 100, pin: true }
+        items: { label: Items, width: 90, color: { danger: ["0"] } }
+        quests: { label: Quests, width: 90, color: { danger: ["0"] } }
+        zones: { label: Zones, width: 90, color: { danger: ["0"] } }
+        dungeons: { label: Dungeons, width: 90, color: { danger: ["0"] } }
+        areas: { label: Areas, width: 90, color: { danger: ["0"] } }
+        recipes: { label: Recipes, width: 90, color: { danger: ["0"] } }
+  - kind: label
+    params:
+      text: "Red = nothing at those levels. Quests come from players' game caches (opendata), so they stop where players have got to; dungeon levels come only from seeds/ref_dungeon_levels.csv; zone levels from sub-area exploration levels or seeds/ref_zone_levels.csv."
+      style: muted

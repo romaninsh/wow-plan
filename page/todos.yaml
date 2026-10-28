@@ -1,0 +1,162 @@
+# yaml-language-server: $schema=./page-schema-1.json
+#
+# One bracket of a plan, for the admin: its places and its to-dos (plan_targets). Always scoped:
+# args.plan_id + args.block_id (+ args.title, the breadcrumb). Opened from the plan overview's
+# bracket list or the Brackets page, never from the menu: no page lists several plans' or
+# brackets' to-dos.
+# With args.place (a place_key from view plan_place_groups: "dungeon:7", "zone:1497",
+# "area:159" or "none") the same page shows only that place's to-dos, and new ones go there:
+# a click on a place pushes Plans › <plan> › <bracket> › <place>.
+#
+# The binder: quicksearch and the filter funnel; Summary tab (view/todo_summary.yaml: reference,
+# place, owners, ticks, read-only); Details tab (form/todo_details.yaml: title, count, purpose,
+# notes only, so a save never writes the embedded fields back as text); built-in Delete (a gap in
+# the order numbers is harmless). Adding and anything that needs a game-data lookup or keeps
+# ticks consistent goes through actions: the toolbar's Add buttons (action/add_todo.yaml, into
+# this bracket unless the dialog names another), Tick, Move, Change reference or place.
+title: "${args.title}"
+body:
+  - kind: label
+    when: '(args.block_id ?? "") == ""'
+    params: { text: "To-dos belong to one bracket: open them from a bracket of a plan.", style: muted }
+
+  # the bracket (and the place, when one is open) as the heading
+  - kind: list
+    when: '(args.block_id ?? "") != ""'
+    observe: { script: 'scenery("plan_block").where("_id", args.block_id)' }
+    item:
+      - kind: row
+        children:
+          - kind: label
+            params: { text: "${args.title}", style: heading, icon: ListChecks }
+          - kind: label
+            params: { text: "${row.title} · levels ${row.min_level}-${row.max_level}", style: muted }
+
+  # the bracket's places, open or done; a click opens that place's to-dos
+  - kind: divider
+    when: '(args.block_id ?? "") != "" && (args.place ?? "") == ""'
+    label: Places
+  - kind: list
+    name: places
+    when: '(args.block_id ?? "") != "" && (args.place ?? "") == ""'
+    observe: { script: 'scenery("plan_place_group").where("block_id", args.block_id).sort("sort_key", "asc")' }
+    action: 'open("todos", #{ plan_id: args.plan_id, block_id: args.block_id, title: row.place_name, place: row.place_key })'
+    item:
+      - kind: row
+        children:
+          - kind: label
+            params: { text: "${row.place_name}", style: heading, icon: MapPin }
+          - kind: label
+            params: { text: "${row.place_kind} · ${row.progress}", style: muted }
+          - kind: label
+            when: 'row.status == "done"'
+            params: { text: "done", icon: CircleCheck }
+
+  - kind: divider
+    when: '(args.block_id ?? "") != ""'
+    label: To-dos
+  - kind: binder
+    name: todos
+    when: '(args.block_id ?? "") != ""'
+    observe:
+      script: |
+        let t = scenery("plan_target").where("plan_id", args.plan_id).where("block_id", args.block_id);
+        // every opener passes place ("" = the whole bracket): an observe script can't read an
+        // arg the page wasn't given, not even with ??
+        // place_key is the flat copy of place: a dotted filter (place.zone_id) matches nothing,
+        // since the binder narrows the cached rows, where `place` is a string column
+        if args.place != "" { t = t.where("place_key", args.place); }
+        t.sort("order", "asc")
+    params:
+      allow_add: false
+      default_sort: { column: order, direction: asc }
+      form: todo_details
+      views: [todo_summary]
+      filter: [kind, purpose, title, notes]
+      toolbar:
+        - label: Item
+          icon: Gem
+          action: |
+            let r = actions.add_todo(#{ plan_id: args.plan_id, block_id: args.block_id, place: args.place, kind: "Item" });
+            toast(r.message, if r.ok { "success" } else { "error" });
+        - label: Quest
+          icon: BookOpen
+          action: |
+            let r = actions.add_todo(#{ plan_id: args.plan_id, block_id: args.block_id, place: args.place, kind: "Quest" });
+            toast(r.message, if r.ok { "success" } else { "error" });
+        - label: Trip
+          icon: Map
+          action: |
+            let r = actions.add_todo(#{ plan_id: args.plan_id, block_id: args.block_id, place: args.place, kind: "Trip" });
+            toast(r.message, if r.ok { "success" } else { "error" });
+        - label: Profession
+          icon: GraduationCap
+          action: |
+            let r = actions.add_todo(#{ plan_id: args.plan_id, block_id: args.block_id, place: args.place, kind: "Profession" });
+            toast(r.message, if r.ok { "success" } else { "error" });
+        - label: Level
+          icon: TrendingUp
+          action: |
+            let r = actions.add_todo(#{ plan_id: args.plan_id, block_id: args.block_id, place: args.place, kind: "Level" });
+            toast(r.message, if r.ok { "success" } else { "error" });
+        - label: Note
+          icon: StickyNote
+          action: |
+            let r = actions.add_todo(#{ plan_id: args.plan_id, block_id: args.block_id, place: args.place, kind: "Note" });
+            toast(r.message, if r.ok { "success" } else { "error" });
+      columns:
+        order: { label: "#", width: 40 }
+        title: { label: To-do, width: 300, pin: true }
+        kind:
+          label: Kind
+          width: 110
+          labels:
+            travel_to_zone: Trip
+            acquire_item: Get item
+            complete_quest: Quest
+            reach_profession_level: Profession
+            craft_item: Craft item
+            run_dungeon: Dungeon run
+            reach_level: Level
+            note: Note
+          color: { blue: [acquire_item, run_dungeon], green: [craft_item, reach_profession_level], yellow: [complete_quest], muted: [note] }
+        count: { label: Count, width: 60 }
+        level: { label: Level, width: 60 }
+        purpose: { label: Purpose, width: 80, labels: { sell: Sell, use: Use, give: Give } }
+        # done once for the whole plan, whoever it is for (the page can't know who is looking)
+        done: { label: Done, width: 60, labels: { "true": Done, "false": "" }, color: { success: ["true"] } }
+        done_at: { label: Done on, width: 110, render: relative }
+        notes: { label: Notes, width: 280 }
+      row_actions:
+        - label: Tick done
+          icon: CircleCheck
+          when: 'row.done != true'
+          action: |
+            try { actions.tick_target(#{ target_id: row._id, done: true }); } catch (e) { throw actions.plain_error(#{ error: `${e}` }).message; }
+            notify(`Done: ${row.title}`);
+        - label: Open again
+          icon: Undo2
+          when: 'row.done == true'
+          action: |
+            try { actions.tick_target(#{ target_id: row._id, done: false }); } catch (e) { throw actions.plain_error(#{ error: `${e}` }).message; }
+            notify(`Open again: ${row.title}`);
+        - label: Move
+          icon: ChevronsUpDown
+          action: |
+            let r = actions.target_move_form(row);
+            let a = #{ target_id: row._id };
+            if r.block_id != () { a.block_id = r.block_id; }
+            if r.position != () { a.order = r.position; }
+            let res = ();
+            try { res = actions.move_target(a); } catch (e) { throw actions.plain_error(#{ error: `${e}` }).message; }
+            notify(if res.level_note == () { "To-do moved" } else { `To-do moved; ${res.level_note}` });
+        - label: Change reference or place
+          icon: Pencil
+          action: |
+            let r = actions.target_edit_form(row);
+            let res = ();
+            try {
+              let a = actions.build_target_args(#{ target_id: row._id, form: r });
+              res = actions.update_target(a);
+            } catch (e) { throw actions.plain_error(#{ error: `${e}` }).message; }
+            notify(if res.level_note == () { "To-do saved" } else { `To-do saved; ${res.level_note}` });

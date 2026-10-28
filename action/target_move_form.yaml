@@ -1,0 +1,22 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Desktop dialog to move a target to another bracket and/or position; opened with the row.
+# move_target accepts any bracket of the plan (level fit is loose: a mismatch comes back as a
+# note) and renumbers the brackets' orders. Opened with a plan_targets row (the To-dos binder).
+kind: form
+dialog:
+  title: "Move ${row.title}"
+  description: "Now at position ${row.order} in this bracket."
+  confirm_label: Move to-do
+form:
+  fields:
+    - { name: plan_id, type: string, label: Plan link, readonly: true }
+    - name: block_id
+      type: string
+      label: "To bracket (blank = stay)"
+      required: false
+      widget: dropdown
+      option_label: title
+      options: |
+        table("plan_block").where("plan_id", form["plan_id"])
+    - { name: position, type: int, label: "Position in the bracket (blank = last)", required: false }

@@ -1,0 +1,118 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Changes a plan's character. Args: plan_id, character (key or name, case-insensitive), name?
+# (1-40 characters; the key stays), notes? ("" clears), professions?: #{ primary: [skill_line_id,
+# at most 2, category Profession], secondary: [skill_line_id, category Secondary] } (a side left
+# out stays as it is), start?: #{ zone_id | area_id } (snapshotted). Returns #{ id, key, name }.
+# Race and class don't change: they decide the side the plan was made for.
+#
+# Desktop only, not in api/wowplan.yaml (see add_target).
+kind: script
+dialog:
+  title: Change character
+body: |
+  fn int_of(v, what) {
+    if v == () { return (); }
+    let t = type_of(v);
+    if t == "i64" { return v; }
+    if t == "f64" {
+      if v == v.to_int() { return v.to_int(); }
+      throw `${what} must be a whole number`;
+    }
+    if t == "string" {
+      let s = v;
+      s.trim();
+      if s.len() == 0 { return (); }
+      for i in 0..s.len() { if !"0123456789".contains(s.sub_string(i, 1)) { throw `${what} must be a whole number`; } }
+      if s.len() > 9 { throw `${what} is too large`; }
+      return parse_int(s);
+    }
+    throw `${what} must be a whole number`;
+  }
+
+  let plan_id = if args.plan_id == () { "" } else { `${args.plan_id}` };
+  if plan_id == "" || table("plan").get(plan_id) == () { throw "That plan doesn't exist"; }
+  let chars = table("plan_character").where("plan_id", plan_id).sort("order").list();
+  let all = "";
+  for c in chars { if all.len() > 0 { all += " and "; } all += c.name; }
+  if args.character == () { throw `Say which character; this plan has ${all}`; }
+  let w = `${args.character}`.to_lower();
+  w.trim();
+  let ch = ();
+  // the same lookup in every action: an exact key first, then a name (case-insensitive)
+  for c in chars { if c.key == w { ch = c; break; } }
+  if ch == () { for c in chars { if c.name.to_lower() == w { ch = c; break; } } }
+  if ch == () { throw `This plan has no character "${args.character}"; its characters are ${all}`; }
+
+  let patch = #{};
+  if "name" in args {
+    let name = `${args.name}`;
+    name.trim();
+    if name.len() == 0 { throw "Every character needs a name"; }
+    if name.len() > 40 { throw `"${name}" is too long for a character name`; }
+    for c in chars {
+      if c.key != ch.key && c.name.to_lower() == name.to_lower() { throw `The other character is already called ${c.name}`; }
+    }
+    patch.name = name;
+  }
+  if "notes" in args {
+    let n = `${args.notes}`;
+    n.trim();
+    if n.len() > 1000 { throw "The notes are too long (1000 characters at most)"; }
+    patch.notes = if n.len() == 0 { () } else { n };
+  }
+  if "professions" in args {
+    let p = args.professions;
+    if type_of(p) != "map" { throw "Give the professions as primary and secondary lists of skill ids"; }
+    let cur = ch.professions ?? #{ primary: [], secondary: [] };
+    let out = #{ primary: cur.primary ?? [], secondary: cur.secondary ?? [] };
+    for side in ["primary", "secondary"] {
+      if !(side in p) { continue; }
+      let list = p[side];
+      if type_of(list) != "array" { throw `Give the ${side} professions as a list of skill ids`; }
+      let want = if side == "primary" { "Profession" } else { "Secondary" };
+      let refs = [];
+      let seen = [];
+      for v in list {
+        let id = if type_of(v) == "map" { int_of(v.skill_line_id, "skill_line_id") } else { int_of(v, "A skill id") };
+        if id == () { throw "Give each profession as a skill id"; }
+        if seen.contains(id) { continue; }
+        let s = table("skill_line").get(id);
+        if s == () { throw `There is no skill ${id} in the game data`; }
+        if s.category != want {
+          if s.category == "Profession" || s.category == "Secondary" {
+            throw `${s.name} is a ${if s.category == "Profession" { "primary" } else { "secondary" }} profession`;
+          }
+          throw `${s.name} isn't a profession`;
+        }
+        seen.push(id);
+        refs.push(#{ skill_line_id: s.skill_line_id, name: s.name });
+      }
+      if side == "primary" && refs.len() > 2 { throw "A character has at most two primary professions"; }
+      out[side] = refs;
+    }
+    patch.professions = out;
+  }
+  if "start" in args {
+    let s = args.start;
+    if type_of(s) != "map" { throw "Give the start as zone_id or area_id"; }
+    if s.zone_id != () && s.area_id != () { throw "Give the start as one zone or one area"; }
+    if s.zone_id != () {
+      let id = int_of(s.zone_id, "zone_id");
+      let z = table("zone").get(id);
+      if z == () { throw `There is no zone ${id} in the game data`; }
+      patch.start = #{ zone_id: z.zone_id, name: z.name };
+    } else if s.area_id != () {
+      let id = int_of(s.area_id, "area_id");
+      let a = table("area").get(id);
+      if a == () { throw `There is no area ${id} in the game data`; }
+      patch.start = #{ area_id: a.area_id, name: a.name };
+    } else {
+      throw "Give the start as zone_id or area_id";
+    }
+  }
+  if patch.keys().len() == 0 { throw "Nothing to change: give a name, notes, professions or a start"; }
+  table("plan_character").patch(ch._id, patch);
+  table("plan").patch(plan_id, #{ updated_at: `${now()}` });
+
+  #{ id: ch._id, key: ch.key, name: patch.name ?? ch.name }

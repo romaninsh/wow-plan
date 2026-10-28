@@ -1,0 +1,9 @@
+# yaml-language-server: $schema=./action-schema-1.json
+kind: confirm
+dialog:
+  title: "Remove ${row.title}?"
+  description: "The to-do and its ticks are removed from the plan. This can't be undone."
+  confirm_label: Remove to-do
+  cancel_label: Keep it
+  confirm_style: danger
+  size: sm

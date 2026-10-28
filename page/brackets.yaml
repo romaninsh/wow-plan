@@ -1,0 +1,77 @@
+# yaml-language-server: $schema=./page-schema-1.json
+#
+# The bracket editor for one plan (plan_blocks): add, change levels, remove. Opened only from the
+# plan page's Edit brackets (args.plan_id), never from the menu. Browsing a bracket's places
+# and to-dos is the plan page's bracket list, not here: one page per job, one path into each.
+# A grid, not a binder: built-in Delete would leave the bracket's to-dos without a
+# bracket and can't be switched off; Remove bracket (remove_block) refuses while it has to-dos
+# and renumbers the rest.
+# Title, levels and notes are edited in the drawer (view/bracket_edit.yaml, the built-in record
+# form, unchecked: the admin is trusted). Change levels runs update_block, which checks
+# overlaps, renumbers by level and names to-dos the new range no longer covers. Add bracket
+# runs add_block (ids <plan>.b<n>, orders by level).
+title: Edit brackets
+body:
+  - kind: label
+    when: '(args.plan_id ?? "") == ""'
+    params: { text: "Brackets belong to one plan: open them from a plan on the Plans page.", style: muted }
+
+  - kind: list
+    when: '(args.plan_id ?? "") != ""'
+    observe: { script: 'scenery("plan").where("_id", args.plan_id)' }
+    item:
+      - kind: row
+        children:
+          - kind: label
+            params: { text: "${row.name}", style: heading, icon: Layers }
+          - kind: label
+            params: { text: "Level brackets · wow-plan.com/${row._id}", style: muted }
+  - kind: row
+    when: '(args.plan_id ?? "") != ""'
+    children:
+      - kind: button
+        name: add_bracket_button
+        params:
+          label: Add bracket
+          icon: Plus
+          style: primary
+          action: |
+            let r = actions.bracket_form();
+            try {
+              actions.add_block(#{ plan_id: args.plan_id, min_level: r.min_level, max_level: r.max_level, title: r.title });
+              toast(`Bracket ${r.min_level}-${r.max_level} added`, "success");
+            } catch (e) {
+              toast(actions.plain_error(#{ error: `${e}` }).message, "error");
+            }
+
+  - kind: grid
+    name: brackets
+    when: '(args.plan_id ?? "") != ""'
+    observe:
+      script: 'scenery("plan_block").where("plan_id", args.plan_id).sort("order", "asc")'
+    params:
+      refresh_interval: 2
+      drawer: { view: bracket_edit, height: 360 }
+      columns:
+        order: { label: "#", width: 40 }
+        min_level: { label: From level, width: 80 }
+        max_level: { label: To level, width: 80 }
+        title: { label: Bracket, width: 280, pin: true }
+        notes: { label: Notes, width: 420 }
+      row_actions:
+        - label: Change levels
+          icon: Pencil
+          action: |
+            let r = actions.bracket_form(row);
+            let res = ();
+            try {
+              res = actions.update_block(#{ block_id: row._id, min_level: r.min_level, max_level: r.max_level, title: r.title });
+            } catch (e) { throw actions.plain_error(#{ error: `${e}` }).message; }
+            notify(if res.level_note == () { "Bracket saved" } else { `Bracket saved; ${res.level_note}` });
+        - label: Remove bracket
+          icon: Trash2
+          action: |
+            if actions.confirm_remove_bracket(row) {
+              try { actions.remove_block(#{ block_id: row._id }); } catch (e) { throw actions.plain_error(#{ error: `${e}` }).message; }
+              notify("Bracket removed");
+            }

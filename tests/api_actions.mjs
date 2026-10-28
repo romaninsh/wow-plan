@@ -4,6 +4,8 @@
 //   db.plans.deleteMany({name: /^api test /}); db.plan_characters.deleteMany({plan_id: {$in: [...]}})
 // (mongo/README.md has the mongosh command).
 
+const SAMPLE_CODE = "Grr4"; // House of Grr's edit code (mongo/seed.js, mongo/README.md)
+
 const base = process.argv[2];
 if (!base) { console.error("usage: node tests/api_actions.mjs <api url>"); process.exit(2); }
 const ws = new WebSocket(base.replace(/^http/, "ws") + "/v1/ws");
@@ -47,7 +49,8 @@ ws.onopen = async () => {
     ],
   });
   const res = made.result ?? {};
-  check("create_plan with two Horde characters", made.status === "done" && /^[0-9A-Za-z]{7}$/.test(res.id ?? ""),
+  check("create_plan with two Horde characters",
+    made.status === "done" && /^[0-9A-Za-z]{7}$/.test(res.id ?? "") && /^[0-9A-Za-z]{4}$/.test(res.edit_code ?? ""),
     made.error ? JSON.stringify(made.error) : `id ${res.id}, edit code ${res.edit_code}`);
 
   const mixed = await invoke("create_plan", {
@@ -68,7 +71,7 @@ ws.onopen = async () => {
     const wrong = await invoke("check_edit_code", { plan_id: res.id, code: "nope" });
     check("check_edit_code refuses a wrong code", wrong.result?.editable === false, JSON.stringify(wrong.result));
   }
-  const sample = await invoke("check_edit_code", { plan_id: "k3Fq9xZ", code: "GrrDemoEdit2" });
+  const sample = await invoke("check_edit_code", { plan_id: "k3Fq9xZ", code: SAMPLE_CODE });
   check("check_edit_code accepts the sample plan's code", sample.result?.editable === true, JSON.stringify(sample.result));
   const missing = await invoke("check_edit_code", { plan_id: "Nope123", code: "x" });
   check("check_edit_code on a missing plan", missing.result?.found === false, JSON.stringify(missing.result));

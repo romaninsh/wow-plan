@@ -1,0 +1,119 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Adds a level bracket to a plan. Args: plan_id, min_level, max_level (1-60, min <= max),
+# title? (default "Levels 20-30"), zones?: [#{ zone_id | area_id: int }] (snapshotted).
+# Brackets may share an edge level (1-10 and 10-20, as the samples do) but not overlap further,
+# and two brackets can't have the same range. A one-level bracket (30-30) can't touch another
+# bracket at all, or three brackets would share that level. The bracket takes its place by level: orders are
+# renumbered 1..n by (min_level, max_level), ids stay <plan_id>.b<n> with n one above the highest
+# in use. Returns #{ id, order, min_level, max_level }.
+#
+# Desktop only, not in api/wowplan.yaml (see add_target).
+kind: script
+dialog:
+  title: Add bracket
+body: |
+  fn text_of(v) {
+    if v == () { return (); }
+    let s = `${v}`;
+    s.trim();
+    if s.len() == 0 { () } else { s }
+  }
+  fn int_of(v, what) {
+    if v == () { return (); }
+    let t = type_of(v);
+    if t == "i64" { return v; }
+    if t == "f64" {
+      if v == v.to_int() { return v.to_int(); }
+      throw `${what} must be a whole number`;
+    }
+    if t == "string" {
+      let s = v;
+      s.trim();
+      if s.len() == 0 { return (); }
+      for i in 0..s.len() { if !"0123456789".contains(s.sub_string(i, 1)) { throw `${what} must be a whole number`; } }
+      if s.len() > 9 { throw `${what} is too large`; }
+      return parse_int(s);
+    }
+    throw `${what} must be a whole number`;
+  }
+
+  let plan_id = text_of(args.plan_id);
+  if plan_id == () { throw "Say which plan"; }
+  if table("plan").get(plan_id) == () { throw `There is no plan ${plan_id}`; }
+
+  let min = int_of(args.min_level, "The first level");
+  let max = int_of(args.max_level, "The last level");
+  if min == () || max == () { throw "Say which levels the bracket covers, for example 20 to 30"; }
+  if min < 1 || max > 60 { throw "Levels go from 1 to 60"; }
+  if min > max { throw `A bracket can't start at ${min} and end at ${max}`; }
+
+  let title = text_of(args.title);
+  if title == () { title = `Levels ${min}-${max}`; }
+  if title.len() > 120 { throw "The bracket title is too long (120 characters at most)"; }
+
+  let zones = [];
+  if args.zones != () {
+    if type_of(args.zones) != "array" { throw "Give the zones as a list, for example zone_id: 130"; }
+    for z in args.zones {
+      if type_of(z) != "map" { throw "Give each zone as zone_id or area_id"; }
+      if z.zone_id != () {
+        let id = int_of(z.zone_id, "zone_id");
+        let row = table("zone").get(id);
+        if row == () { throw `There is no zone ${id} in the game data`; }
+        zones.push(#{ zone_id: row.zone_id, name: row.name });
+      } else if z.area_id != () {
+        let id = int_of(z.area_id, "area_id");
+        let row = table("area").get(id);
+        if row == () { throw `There is no area ${id} in the game data`; }
+        zones.push(#{ area_id: row.area_id, name: row.name });
+      } else {
+        throw "Give each zone as zone_id or area_id";
+      }
+    }
+  }
+
+  let blocks = table("plan_block").where("plan_id", plan_id).sort("order").list();
+  let top = 0;
+  for b in blocks {
+    if b.min_level == min && b.max_level == max { throw `This plan already has a ${min}-${max} bracket`; }
+    if b.min_level < max && min < b.max_level {
+      throw `Levels ${min}-${max} overlap the ${b.min_level}-${b.max_level} bracket; brackets may share one edge level (10-20 and 20-30) but no more`;
+    }
+    // a one-level bracket can't sit on another bracket's edge: three brackets would share it
+    if (min == max || b.min_level == b.max_level) && b.min_level <= max && min <= b.max_level {
+      throw `Levels ${min}-${max} share level ${if min == max { min } else { b.min_level }} with the ${b.min_level}-${b.max_level} bracket; a one-level bracket can't touch another bracket`;
+    }
+    let n = b._id.sub_string(plan_id.len() + 2, b._id.len() - plan_id.len() - 2);
+    let digits = n.len() > 0;
+    for i in 0..n.len() { if !"0123456789".contains(n.sub_string(i, 1)) { digits = false; } }
+    if digits { let v = parse_int(n); if v > top { top = v; } }
+  }
+  let id = "";
+  loop {
+    top += 1;
+    id = `${plan_id}.b${top}`;
+    if table("plan_block").get(id) == () { break; }
+  }
+
+  // the new bracket goes in at the top, then every bracket is renumbered by level. Orders are
+  // unique per plan, so the renumbering passes through 1000+ first.
+  let big = 1000;
+  for b in blocks { if b.order >= big { big = b.order + 1; } }
+  table("plan_block").insert(#{
+    _id: id, plan_id: plan_id, order: big * 2, title: title,
+    min_level: min, max_level: max, zones: zones, notes: (),
+  });
+  let all = table("plan_block").where("plan_id", plan_id).sort("min_level").sort("max_level").list();
+  let i = 0;
+  for b in all { i += 1; table("plan_block").patch(b._id, #{ order: big + i }); }
+  i = 0;
+  let order = 0;
+  for b in all {
+    i += 1;
+    table("plan_block").patch(b._id, #{ order: i });
+    if b._id == id { order = i; }
+  }
+  table("plan").patch(plan_id, #{ updated_at: `${now()}` });
+
+  #{ id: id, order: order, min_level: min, max_level: max }

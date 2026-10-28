@@ -1,0 +1,56 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Desktop helper behind the To-dos binder's toolbar: opens the dialog for one kind of to-do
+# (target_<kind>_form), puts it in the bracket on screen unless the dialog names another (and
+# at the place on screen, args.place, unless the dialog picks one), and adds it through
+# add_target (which checks everything). Args: plan_id, block_id, place? (a place_key), kind
+# (Item, Quest, Trip, Profession, Level, Note). Returns #{ ok, message } for the toolbar's toast:
+# a toolbar body can't use the word "throw" (it contains "row", which disables the button).
+# Desktop only, not in api/wowplan.yaml.
+kind: script
+dialog:
+  title: Add to-do
+body: |
+  let pre = #{ plan_id: args.plan_id };
+  let k = args.kind;
+  let r = ();
+  let kind = "";
+  if k == "Item" {
+    r = actions.target_item_form(pre);
+    kind = if r.craft == true { "craft_item" } else { "acquire_item" };
+  } else if k == "Quest" {
+    r = actions.target_quest_form(pre);
+    kind = "complete_quest";
+  } else if k == "Trip" {
+    r = actions.target_place_form(pre);
+    kind = "travel_to_zone";
+  } else if k == "Profession" {
+    r = actions.target_profession_form(pre);
+    kind = "reach_profession_level";
+  } else if k == "Level" {
+    r = actions.target_level_form(pre);
+    kind = "reach_level";
+  } else {
+    r = actions.target_note_form(pre);
+    kind = "note";
+  }
+  // this bracket unless the dialog picked another
+  if r.block_id == () || `${r.block_id}` == "" { r.block_id = args.block_id; }
+  // on a place's page (args.place = "dungeon:7", "zone:1497", "area:159"), this place unless the
+  // dialog picked one; a trip is about its own place, so it always picks
+  let here = args.place ?? "";
+  let picked = r.place_zone != () || r.place_area != () || r.place_dungeon != ();
+  if here != "" && here != "none" && kind != "travel_to_zone" && !picked {
+    let i = here.index_of(":");
+    let what = here.sub_string(0, i);
+    let id = here.sub_string(i + 1, here.len() - i - 1);
+    if what == "dungeon" { r.place_dungeon = id; } else if what == "zone" { r.place_zone = id; } else { r.place_area = id; }
+  }
+  try {
+    let a = actions.build_target_args(#{ plan_id: args.plan_id, kind: kind, form: r });
+    let res = actions.add_target(a);
+    // level fit is loose: a mismatch is a hint, not an error
+    #{ ok: true, message: if res.level_note == () { "To-do added" } else { `To-do added; ${res.level_note}` } }
+  } catch (e) {
+    #{ ok: false, message: actions.plain_error(#{ error: `${e}` }).message }
+  }

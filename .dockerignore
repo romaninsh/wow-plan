@@ -1,0 +1,27 @@
+.env
+.env.*
+.env*
+**/.env
+**/.env.*
+.agents
+.claude
+.git
+profiles/*.env
+tests
+web/*/node_modules
+web/*/dist
+web/*/e2e
+web/*/test
+# this project's heavy or desktop-only folders
+refs
+.venv
+dbt
+seeds
+pipeline
+mongo
+docs
+tmp
+.playwright-mcp
+.superpowers
+data
+FEEDBACK.md

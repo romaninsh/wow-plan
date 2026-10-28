@@ -1,0 +1,59 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Desktop dialog for a profession-level target. A skill level says nothing about character
+# level, so the bracket is required.
+kind: form
+dialog:
+  title: "Add a profession level"
+  confirm_label: Add
+form:
+  fields:
+    - { name: plan_id, type: string, label: Plan link, readonly: true }
+    - name: skill
+      type: string
+      label: Profession
+      widget: dropdown
+      option_label: name
+      # the nine primary professions plus First Aid, Cooking and Fishing (the data's
+      # "Secondary" category also holds racials and riding; the 29xx ids are duplicates)
+      options: |
+        table("skill_line").where("skill_line_id", "in", [164, 165, 171, 182, 186, 197, 202, 333, 393, 129, 185, 356])
+    - { name: level, type: int, label: Skill level, placeholder: "e.g. 75" }
+    - name: block_id
+      type: string
+      label: "Another bracket (blank = this one)"
+      required: false
+      widget: dropdown
+      option_label: title
+      options: |
+        table("plan_block").where("plan_id", form["plan_id"])
+    - name: character
+      type: string
+      label: "Who (blank = everyone)"
+      required: false
+      widget: dropdown
+      option_value: key
+      option_label: name
+      options: |
+        table("plan_character").where("plan_id", form["plan_id"])
+    - { name: place_search, type: string, label: Find place, placeholder: "e.g. Undercity", required: false }
+    - name: place_zone
+      type: string
+      label: "Place: zone"
+      required: false
+      widget: dropdown
+      option_label: name
+      options: |
+        let s = form["place_search"];
+        if s == () { table("zone").limit(200) } else { table("zone").search(s).limit(50) }
+    - name: place_area
+      type: string
+      label: "Place: town or area"
+      required: false
+      widget: dropdown
+      option_label: name
+      options: |
+        let s = form["place_search"];
+        if s == () { table("area").where("area_id", 0) } else { table("area").search(s).limit(50) }
+    - { name: title, type: string, label: "Title (blank = profession and level)", required: false }
+    - { name: notes, type: string, label: Notes, multiline: true, required: false }

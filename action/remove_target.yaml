@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Removes a target. Args: target_id. The rest of its bracket is renumbered 1..n.
+# Returns #{ id, block_id }.
+#
+# Desktop only, not in api/wowplan.yaml (see add_target).
+kind: script
+dialog:
+  title: Remove target
+body: |
+  let target_id = if args.target_id == () { "" } else { `${args.target_id}` };
+  let t = if target_id == "" { () } else { table("plan_target").get(target_id) };
+  if t == () { throw "That target doesn't exist (any more)"; }
+
+  table("plan_target").delete(t._id);
+  let i = 0;
+  for o in table("plan_target").where("plan_id", t.plan_id).where("block_id", t.block_id).sort("order").list() {
+    i += 1;
+    if o.order != i { table("plan_target").patch(o._id, #{ order: i }); }
+  }
+  table("plan").patch(t.plan_id, #{ updated_at: `${now()}` });
+
+  #{ id: t._id, block_id: t.block_id }

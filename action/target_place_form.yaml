@@ -1,0 +1,60 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Desktop dialog for a trip (travel to a zone or town) or a dungeon run. The place picked is
+# both the target's reference and its place. Pick exactly one of zone, area or dungeon.
+kind: form
+dialog:
+  title: "Add a trip or dungeon run"
+  description: "Type part of the name, then pick one zone, town or dungeon. It goes in this bracket unless you pick another."
+  confirm_label: Add
+  size: lg
+form:
+  fields:
+    - { name: plan_id, type: string, label: Plan link, readonly: true }
+    - { name: place_search, type: string, label: Find place, placeholder: "e.g. Shadowfang", required: false }
+    - name: place_zone
+      type: string
+      label: Zone
+      required: false
+      widget: dropdown
+      option_label: name
+      options: |
+        let s = form["place_search"];
+        if s == () { table("zone").limit(200) } else { table("zone").search(s).limit(50) }
+    - name: place_area
+      type: string
+      label: Town or area
+      required: false
+      widget: dropdown
+      option_label: name
+      options: |
+        let s = form["place_search"];
+        if s == () { table("area").where("area_id", 0) } else { table("area").search(s).limit(50) }
+    - name: place_dungeon
+      type: string
+      label: Dungeon
+      required: false
+      widget: dropdown
+      option_label: name
+      options: |
+        let s = form["place_search"];
+        if s == () { table("dungeon").limit(100) } else { table("dungeon").search(s).limit(50) }
+    - name: character
+      type: string
+      label: "Who (blank = everyone)"
+      required: false
+      widget: dropdown
+      option_value: key
+      option_label: name
+      options: |
+        table("plan_character").where("plan_id", form["plan_id"])
+    - name: block_id
+      type: string
+      label: "Another bracket (blank = this one)"
+      required: false
+      widget: dropdown
+      option_label: title
+      options: |
+        table("plan_block").where("plan_id", form["plan_id"])
+    - { name: title, type: string, label: "Title (blank = the place's name)", required: false }
+    - { name: notes, type: string, label: Notes, multiline: true, required: false }

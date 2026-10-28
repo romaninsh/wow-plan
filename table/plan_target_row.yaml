@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=./table-schema-1.json
+# Targets as the Guides pages show them: MongoDB view `plan_target_rows` (mongo/views.js), one
+# row per target with its place lifted out and its owners resolved; done is the target's own
+# flag (done once for the whole plan). Read-only; edits go through the target actions.
+datasource: plans
+title: Plan targets
+table: plan_target_rows
+mongo: { view: true }
+columns:
+  - { name: _id, label: ID, type: string, flags: [id, hidden] }
+  - { name: plan_id, label: Plan, type: string, flags: [hidden] }
+  - { name: block_id, label: Bracket ID, type: string, flags: [hidden] }
+  - { name: block_title, label: Bracket, type: string, flags: [searchable] }
+  - { name: block_levels, label: Levels, type: string }
+  - { name: block_order, label: Bracket order, type: int, flags: [hidden] }
+  - { name: order, label: Order, type: int }
+  - { name: sort_key, label: Sort, type: int, flags: [hidden] }
+  - { name: group_id, label: Place group, type: string, flags: [hidden] }
+  - { name: place_key, label: Place key, type: string, flags: [hidden] }
+  - { name: place_kind, label: Place kind, type: string, enum: [zone, dungeon, area, none] }
+  - { name: place_name, label: Place, type: string, flags: [searchable] }
+  - { name: place_status, label: Place status, type: string, enum: [open, done] }
+  - { name: group_done, label: Place done, type: int }
+  - { name: group_total, label: Place targets, type: int }
+  - name: kind
+    label: Kind
+    type: string
+    enum: [travel_to_zone, acquire_item, complete_quest, reach_profession_level, craft_item, run_dungeon, reach_level, note]
+  - { name: title, label: Target, type: string, flags: [title, searchable] }
+  - { name: ref_name, label: Reference, type: string, flags: [searchable] }
+  - { name: count, label: Count, type: int }
+  - { name: level, label: Level, type: int }
+  - { name: purpose, label: Purpose, type: string, enum: [sell, use, give] }
+  - { name: for_character, label: For, type: string }
+  - { name: who, label: Who, type: string, flags: [searchable] }
+  - { name: done, label: Done, type: bool }
+  - { name: done_status, label: Status, type: string, enum: [open, done] }
+  - { name: notes, label: Notes, type: string, flags: [searchable] }
+  # embedded arrays and documents, read by the edit forms (prefill)
+  - { name: characters, label: Characters, type: string, flags: [hidden] }
+  - { name: done_at, label: Done on, type: string, flags: [hidden] }
+  - { name: owners, label: Owners, type: string, flags: [hidden] }
+  - { name: ref, label: Ref, type: string, flags: [hidden] }
+  - { name: place, label: Place ref, type: string, flags: [hidden] }

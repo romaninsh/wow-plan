@@ -1,6 +1,11 @@
 # yaml-language-server: $schema=./menu-schema-1.json
 title: wow-plan admin
 items:
+  # Brackets and To-dos are not here: they always belong to one plan, opened from it.
+  - page: plans
+    label: Plans
+    icon: Map
+  - divider: true
   - page: items
     label: Items
     icon: Gem
@@ -43,15 +48,12 @@ items:
         label: Classes, races, factions
         icon: Shield
   - divider: true
-  - section: Guides
-    children:
-      - page: plans
-        label: Plans
-        icon: Map
-      - page: plan_targets
-        label: Targets
-        icon: ListChecks
-  - divider: true
+  - page: data_stats
+    label: Data stats
+    icon: ChartBar
   - page: data
     label: Data
     icon: Database
+  - page: imports
+    label: Import history
+    icon: Clock

@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=./table-schema-1.json
+# Every import and rollback of this database's reference data: wow_meta.import_history,
+# written by pipeline/publish.py, outside the swapped schemas so it survives every import. Read
+# through the view wow.import_history that each import (and rollback) creates, since the
+# datasource reads schema wow only. Read-only here.
+datasource: wow
+title: Import history
+table: import_history
+columns:
+  - { name: id, label: Run, type: int, flags: [id] }
+  - { name: finished_at, label: Finished, type: timestamp, time_precision: minutes }
+  - { name: action, label: Action, type: string, enum: [import, rollback] }
+  - { name: status, label: Outcome, type: string }
+  - { name: target, label: Target, type: string }
+  - { name: build, label: Build, type: string, flags: [title, searchable] }
+  - { name: product, label: Product, type: string }
+  - { name: duration_s, label: Seconds, type: int }
+  - { name: tables, label: Tables, type: int }
+  - { name: total_rows, label: Rows, type: int }
+  - { name: items, label: Items, type: int }
+  - { name: quests, label: Quests, type: int }
+  - { name: zones, label: Zones, type: int }
+  - { name: dungeons, label: Dungeons, type: int }
+  - { name: npcs, label: NPCs, type: int }
+  - { name: recipes, label: Recipes, type: int }
+  - { name: opendata_commit, label: Opendata, type: string }
+  - { name: code_commit, label: Code, type: string }
+  - { name: fetched_at, label: Tables fetched, type: string }
+  - { name: message, label: Message, type: string }

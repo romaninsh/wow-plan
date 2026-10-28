@@ -1,0 +1,9 @@
+# yaml-language-server: $schema=./action-schema-1.json
+kind: confirm
+dialog:
+  title: "Remove bracket ${row.title}?"
+  description: "Levels ${row.min_level}-${row.max_level}. Only an empty bracket can be removed; move or remove its targets first."
+  confirm_label: Remove bracket
+  cancel_label: Keep it
+  confirm_style: danger
+  size: sm

@@ -1,22 +1,26 @@
 # yaml-language-server: $schema=./action-schema-1.json
 #
-# Rebuilds the reference database from a fetched build: dbt (staging, stats, marts, tests) in
-# DuckDB inside the container, then a fresh Postgres schema swapped in as `wow`. A failing test
-# stops before the swap, so the pages keep the previous build. Needs postgres running.
+# Rebuilds the reference database of the active profile's target from a fetched build:
+# pipeline/import.sh <target> <build> (dbt, stats, marts and tests in DuckDB on this machine,
+# then a fresh Postgres schema swapped in as `wow`). A failing test stops before the swap, so
+# the pages keep the previous build. Called as actions.import_build(#{ target: profile.target })
+# (TARGET in .env / .env.prod): local = the composer postgres, prod = Cloud SQL.
 kind: command
 description: |
-  Rebuild the reference database from a build already fetched: transform, test, then publish to
-  Postgres. Leave the build empty for the newest fetched build. Takes about a minute.
+  Rebuild the reference database of target "${row.target}" from a build already fetched:
+  transform, test, then publish. Leave the build empty for the newest fetched build. Takes
+  about a minute. Target prod replaces what the live site reads.
 dialog:
-  title: "Import build"
+  title: "Import build into ${row.target}"
   confirm_label: "Import"
 form:
   fields:
+    # callers always pass build ("" from the Data page, the run's build from Re-import)
     - name: build
       type: string
       label: "Client build (empty = newest fetched)"
       required: false
-      default: ""
+      default: "${row.build}"
 terminal:
-  command: docker
-  args: ["compose", "-f", "composer.yaml", "--profile", "pipeline", "run", "--rm", "--no-deps", "pipeline", "import", "${form.build}"]
+  command: sh
+  args: ["pipeline/import.sh", "${row.target}", "${form.build}"]

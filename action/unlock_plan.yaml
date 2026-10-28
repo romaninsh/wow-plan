@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# PARKED: not in api/wowplan.yaml until Vantage has anonymous sessions (agents/BRIEF.md
+# "Sessions and unlock"); session.unlocked becomes the list field session.plans then.
+#
+# Unlocks a plan for this session: the padlock on the plan page. Args: plan_id, key (the plan's
+# edit key). The server compares hash_secret(key) with the stored edit_code_hash; on a match it
+# adds the plan to the session's `unlocked` (session.set), so the session's edits (tick_todo)
+# are allowed for this plan until the session ends. A wrong key changes nothing. Returns
+# #{ unlocked: true }.
+kind: script
+dialog:
+  title: Unlock plan
+body: |
+  let plan_id = if args.plan_id == () { "" } else { `${args.plan_id}` };
+  let key = if args.key == () { "" } else { `${args.key}` };
+  key.trim();
+  let plan = if plan_id == "" { () } else { table("plan").get(plan_id) };
+  if plan == () { throw "There is no such plan"; }
+  if key == "" || plan.edit_code_hash == () || hash_secret(key) != plan.edit_code_hash {
+    throw "That key doesn't unlock this plan";
+  }
+  let list = session.unlocked ?? "";
+  if !list.contains(`,${plan_id},`) {
+    if list == "" { list = ","; }
+    session.set("unlocked", `${list}${plan_id},`);
+  }
+  #{ unlocked: true }

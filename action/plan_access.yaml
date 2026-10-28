@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# PARKED: not in api/wowplan.yaml until Vantage has anonymous sessions (agents/BRIEF.md
+# "Sessions and unlock").
+#
+# Whether this session has unlocked a plan (what the padlock shows after a reload or in another
+# tab of the same browser). Args: plan_id. Returns #{ unlocked }.
+kind: script
+dialog:
+  title: Plan access
+body: |
+  let plan_id = if args.plan_id == () { "" } else { `${args.plan_id}` };
+  let list = session.unlocked ?? "";
+  #{ unlocked: plan_id != "" && list.contains(`,${plan_id},`) }
