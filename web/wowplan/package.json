@@ -17,7 +17,7 @@
     "@fontsource/cinzel": "5.3.0",
     "@fontsource/cinzel-decorative": "5.3.0",
     "@fontsource/marcellus": "5.3.0",
-    "@vantage-ui/client": "file:vendor/vantage-ui-client-0.5.0.tgz",
+    "@vantage-ui/client": "file:vendor/vantage-ui-client-0.6.0.tgz",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-router": "7.18.4"

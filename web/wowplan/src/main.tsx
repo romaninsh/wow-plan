@@ -16,7 +16,9 @@ import "@fontsource/alegreya/700.css";
 import "@fontsource/marcellus/400.css";
 import "./styles.css";
 
-const db = createVantage<Schema>({ schema });
+// The anonymous session's token stays in localStorage: a reload or another tab resumes the
+// session, with the plans it unlocked.
+const db = createVantage<Schema>({ schema, session: "localStorage" });
 
 // Plans live under /p/<id>: the API reserves top-level paths shaped v<digits>, which a random
 // 7-character id could be.

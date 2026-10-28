@@ -3,14 +3,19 @@
 # Removes a target. Args: target_id. The rest of its bracket is renumbered 1..n.
 # Returns #{ id, block_id }.
 #
-# Desktop only, not in api/wowplan.yaml (see add_target).
+# Also in api/wowplan.yaml: the plans datasource's rule refuses it unless the caller's session
+# unlocked the plan.
 kind: script
+description: >
+  Remove one of a plan's targets; the rest of its bracket closes up. Needs the plan unlocked in
+  this session (unlock_plan). Takes target_id. Returns { id, block_id }.
+rate_limit: { per_second: 1, burst: 20 }
 dialog:
   title: Remove target
 body: |
   let target_id = if args.target_id == () { "" } else { `${args.target_id}` };
   let t = if target_id == "" { () } else { table("plan_target").get(target_id) };
-  if t == () { throw "That target doesn't exist (any more)"; }
+  if t == () { fail("That target doesn't exist (any more)"); }
 
   table("plan_target").delete(t._id);
   let i = 0;

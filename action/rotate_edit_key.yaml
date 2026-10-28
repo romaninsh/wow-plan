@@ -2,17 +2,32 @@
 #
 # Gives a plan a new edit key; the old one stops working. Args: plan_id. The key is 4
 # characters from generate_password(4), as in create_plan; only hash_secret(key) is stored.
-# Returns #{ edit_key }: show it once, it can't be read back.
+# Every session that unlocked the plan is locked out at once (session.revoke_all), except the
+# caller's on the API, which now holds the new key. Returns #{ edit_key }: show it once, it
+# can't be read back.
 #
-# Desktop only, not in api/wowplan.yaml (see add_target).
+# The desktop's New edit key button, and the API's for a session that unlocked the plan. The
+# plan has no plan_id column, so the plans datasource's rule doesn't guard it: the check is here.
 kind: script
+description: >
+  Give a plan a new edit key, for when the old one went to someone who shouldn't edit. Every
+  other session that unlocked the plan is locked out at once; this one stays unlocked. Needs
+  the plan unlocked in this session (unlock_plan). Takes plan_id. Returns { edit_key }: the
+  only time the new key can be read.
+rate_limit: { per_second: 1, burst: 20 }
 dialog:
   title: New edit key
 body: |
   let plan_id = if args.plan_id == () { "" } else { `${args.plan_id}` };
   let plan = if plan_id == "" { () } else { table("plan").get(plan_id) };
-  if plan == () { throw "That plan doesn't exist"; }
+  if plan == () { fail("That plan doesn't exist"); }
+  let desktop = session.is_desktop();
+  if !desktop && !session.has("plans", plan._id) {
+    fail("This plan is locked; unlock it with its edit key first");
+  }
 
   let key = generate_password(4);
   table("plan").patch(plan._id, #{ edit_code_hash: hash_secret(key), updated_at: `${now()}` });
+  session.revoke_all("plans", plan._id);
+  if !desktop { session.add("plans", plan._id); }
   #{ edit_key: key }

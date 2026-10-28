@@ -4,8 +4,6 @@
 //   db.plans.deleteMany({name: /^api test /}); db.plan_characters.deleteMany({plan_id: {$in: [...]}})
 // (mongo/README.md has the mongosh command).
 
-const SAMPLE_CODE = "Grr4"; // House of Grr's edit code (mongo/seed.js, mongo/README.md)
-
 const base = process.argv[2];
 if (!base) { console.error("usage: node tests/api_actions.mjs <api url>"); process.exit(2); }
 const ws = new WebSocket(base.replace(/^http/, "ws") + "/v1/ws");
@@ -65,16 +63,13 @@ ws.onopen = async () => {
   const none = await invoke("create_plan", { name: "  ", characters: [{ name: "D", race_id: 2, class_id: 3 }] });
   check("create_plan refuses an empty name", none.status === "failed", none.error?.message);
 
+  // unlocking, locking and the write rule: tests/sessions_and_mcp.mjs
   if (res.id) {
-    const right = await invoke("check_edit_code", { plan_id: res.id, code: res.edit_code });
-    check("check_edit_code accepts the new code", right.result?.editable === true, JSON.stringify(right.result));
-    const wrong = await invoke("check_edit_code", { plan_id: res.id, code: "nope" });
-    check("check_edit_code refuses a wrong code", wrong.result?.editable === false, JSON.stringify(wrong.result));
+    const mine = await invoke("plan_access", { plan_id: res.id });
+    check("create_plan unlocks the new plan in this session", mine.result?.unlocked === true, JSON.stringify(mine.result));
   }
-  const sample = await invoke("check_edit_code", { plan_id: "k3Fq9xZ", code: SAMPLE_CODE });
-  check("check_edit_code accepts the sample plan's code", sample.result?.editable === true, JSON.stringify(sample.result));
-  const missing = await invoke("check_edit_code", { plan_id: "Nope123", code: "x" });
-  check("check_edit_code on a missing plan", missing.result?.found === false, JSON.stringify(missing.result));
+  const sample = await invoke("plan_access", { plan_id: "k3Fq9xZ" });
+  check("the sample plan is locked until unlocked", sample.result?.unlocked === false, JSON.stringify(sample.result));
 
   ws.close();
   process.exit(failed ? 1 : 0);

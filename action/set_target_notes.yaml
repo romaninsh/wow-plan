@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# The plan page's notes editor: one target's notes, trimmed, at most 1000 characters (the
+# page's limit too); empty clears them. The plans datasource's rule refuses it unless this
+# session unlocked the target's plan. Returns #{ id, notes }.
+kind: script
+description: >
+  Set or clear the notes of one of a plan's targets (at most 1000 characters; empty clears
+  them). Needs the plan unlocked in this session (unlock_plan). Takes target_id and notes.
+  Returns { id, notes }.
+rate_limit: { per_second: 1, burst: 20 }
+params:
+  target_id: { type: string }
+  notes: { type: string, required: false }
+dialog:
+  title: Target notes
+body: |
+  let target_id = if args.target_id == () { "" } else { `${args.target_id}` };
+  let t = if target_id == "" { () } else { table("plan_target").get(target_id) };
+  if t == () { fail("That target doesn't exist (any more)"); }
+  let notes = if args.notes == () { "" } else { `${args.notes}` };
+  notes.trim();
+  if notes.len() > 1000 { fail("The notes are too long (1000 characters at most)"); }
+  let value = if notes == "" { () } else { notes };
+  table("plan_target").patch(t._id, #{ notes: value });
+  table("plan").patch(t.plan_id, #{ updated_at: `${now()}` });
+  #{ id: t._id, notes: value }

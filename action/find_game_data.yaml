@@ -1,0 +1,46 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Name search over the game data, for MCP agents: the API's list tools filter by exact values
+# only, and an API entity with `columns` refuses a text search (FEEDBACK.md). Reads Postgres
+# reference data only, never plans. Matches the table's searchable columns, sorted by name:
+# it names things, never ranks them (agents/BRIEF.md, Spirit). Returns #{ rows, more }.
+kind: script
+description: >
+  Find World of Warcraft: Forever game records by name (part of a name, any case) in this
+  client build's data. Takes kind (items, quests, zones, areas, dungeons, skill_lines, recipes)
+  and text. Returns { rows, more }: up to 25 rows sorted by name, each with its id field
+  (item_id, quest_id, zone_id, area_id, lfg_dungeon_id, skill_line_id, recipe_spell_id), name
+  and a few facts; more is true when there were others. Pass the ids to add_target or
+  update_target as ref ({ item_id: 6324 }) or place ({ lfg_dungeon_id: 7 }); get_items,
+  get_zones, get_areas, get_dungeons and get_skill_lines read a full record by that id
+  (quests and recipes have no get tool). Drop sources are not in the data.
+params:
+  kind: { type: string }
+  text: { type: string }
+dialog:
+  title: Find game data
+body: |
+  let tables = #{
+    items: ["item", ["item_id", "name", "quality_name", "item_level", "required_level", "slot_name", "item_class_name", "item_subclass_name"]],
+    quests: ["quest", ["quest_id", "name", "quest_level", "min_level", "zone_name", "category_name"]],
+    zones: ["zone", ["zone_id", "name", "kind", "min_level", "max_level"]],
+    areas: ["area", ["area_id", "name", "zone_name", "exploration_level"]],
+    dungeons: ["dungeon", ["lfg_dungeon_id", "name", "kind", "min_level", "max_level", "max_players"]],
+    skill_lines: ["skill_line", ["skill_line_id", "name", "category"]],
+    recipes: ["recipe", ["recipe_spell_id", "name", "profession_name", "skill_required", "creates_item_id", "creates_item_name"]],
+  };
+  let kind = if args.kind == () { "" } else { `${args.kind}` };
+  if !(kind in tables) { fail("kind is one of items, quests, zones, areas, dungeons, skill_lines, recipes"); }
+  let text = if args.text == () { "" } else { `${args.text}` };
+  text.trim();
+  if text.len() < 2 { fail("Give at least two characters of the name"); }
+  let spec = tables[kind];
+  let found = table(spec[0]).where("name", "like", text).sort("name").limit(26).list();
+  let rows = [];
+  for r in found {
+    if rows.len() == 25 { break; }
+    let row = #{};
+    for c in spec[1] { if r[c] != () { row[c] = r[c]; } }
+    rows.push(row);
+  }
+  #{ rows: rows, more: found.len() > 25 }

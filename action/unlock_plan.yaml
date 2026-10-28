@@ -1,14 +1,20 @@
 # yaml-language-server: $schema=./action-schema-1.json
 #
-# PARKED: not in api/wowplan.yaml until Vantage has anonymous sessions (agents/BRIEF.md
-# "Sessions and unlock"); session.unlocked becomes the list field session.plans then.
-#
-# Unlocks a plan for this session: the padlock on the plan page. Args: plan_id, key (the plan's
-# edit key). The server compares hash_secret(key) with the stored edit_code_hash; on a match it
-# adds the plan to the session's `unlocked` (session.set), so the session's edits (tick_todo)
-# are allowed for this plan until the session ends. A wrong key changes nothing. Returns
-# #{ unlocked: true }.
+# The padlock's Unlock on the plan page. The server compares hash_secret(key) with the stored
+# edit_code_hash; on a match it adds the plan to this session's `plans` list, and the plans
+# datasource's rule then lets this session change that plan until it locks it again
+# (lock_plan), the key is replaced (rotate_edit_key) or the session ends. A wrong key changes
+# nothing. Rate-limited per session and per address: keys are 4 characters.
 kind: script
+description: >
+  Unlock a plan for editing in this session with the plan's edit key (4 characters, from
+  whoever made the plan). Until then every change to the plan is refused. Takes plan_id (the
+  7-character id in the plan's link) and key. Returns { unlocked: true }; a wrong key is an
+  error. Rate-limited: five tries, then one every 5 seconds.
+rate_limit: { per_second: 0.2, burst: 5 }
+params:
+  plan_id: { type: string }
+  key: { type: string }
 dialog:
   title: Unlock plan
 body: |
@@ -16,13 +22,9 @@ body: |
   let key = if args.key == () { "" } else { `${args.key}` };
   key.trim();
   let plan = if plan_id == "" { () } else { table("plan").get(plan_id) };
-  if plan == () { throw "There is no such plan"; }
+  if plan == () { fail("There is no such plan"); }
   if key == "" || plan.edit_code_hash == () || hash_secret(key) != plan.edit_code_hash {
-    throw "That key doesn't unlock this plan";
+    fail("That key doesn't unlock this plan");
   }
-  let list = session.unlocked ?? "";
-  if !list.contains(`,${plan_id},`) {
-    if list == "" { list = ","; }
-    session.set("unlocked", `${list}${plan_id},`);
-  }
+  session.add("plans", plan_id);
   #{ unlocked: true }

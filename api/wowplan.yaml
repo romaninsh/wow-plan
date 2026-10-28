@@ -1,20 +1,30 @@
 # yaml-language-server: $schema=./api-schema-1.json
 title: wow-plan
 description: >
-  The wow-plan.com web app: guides (MongoDB) and the game data they reference (Postgres).
-  Every entity is read-only; writes happen in the API's actions (create_plan, check_edit_code),
-  which check everything on the server.
+  wow-plan.com: personal leveling plans for World of Warcraft: Forever, and the game data they
+  refer to (items, quests, zones, areas, dungeons, skills and professions of one client build).
+  A plan is opened by its 7-character id (the link someone shared); there is no list of plans.
+  It has one or two characters (plan_characters), level brackets (plan_blocks) and targets,
+  the player's own goals (plan_targets), each read under its plan (parent_id). Anyone with the
+  id reads a plan. Changing it needs its 4-character edit key: unlock_plan with the key unlocks
+  it in this session, and every change to a locked plan is refused. Find game records by name
+  with find_game_data, then read one with get_items, get_zones, get_areas, get_dungeons or
+  get_skill_lines. Records are read-only; a plan changes through its actions: add_target,
+  update_target, move_target, remove_target, tick_todo and set_target_notes, which check every
+  field against the game data and the plan. The data names things and their levels; it never
+  says what is best, and it has no drop sources: leave those to the player.
 
 entities:
   # ── guides (MongoDB) ─────────────────────────────────────────────────────────
+  # A plan is read by its link only; its parts only under it (agents/BRIEF.md "Sessions and
+  # unlock"). Writes go through the plans datasource's rule: only plans this session unlocked.
   - name: plans
     observe: plan
     read_only: true
     params:
       # edit_code_hash is deliberately not listed
       columns: [name, description, game_build, forked_from, side, created_at, updated_at]
-      filter: [forked_from]
-      default_sort: -created_at
+    api: { list: false }
 
   - name: plan_characters
     observe: plan_character
@@ -23,6 +33,7 @@ entities:
       columns: [plan_id, key, order, name, race_id, race_name, class_id, class_name, professions, start, notes]
       filter: [plan_id]
       default_sort: order
+    api: { via: plans }
 
   - name: plan_blocks
     observe: plan_block
@@ -31,7 +42,10 @@ entities:
       columns: [plan_id, order, title, min_level, max_level, zones, notes]
       filter: [plan_id]
       default_sort: order
+    api: { via: plans }
 
+  # Changed only through the target actions (below), which check their input; the plans
+  # datasource's rule refuses them on a plan this session didn't unlock.
   - name: plan_targets
     observe: plan_target
     read_only: true
@@ -39,6 +53,7 @@ entities:
       columns: [plan_id, block_id, order, kind, title, characters, ref, place, count, level, purpose, for_character, done, done_at, notes]
       filter: [plan_id, block_id, kind]
       default_sort: order
+    api: { via: plans }
 
   # ── game data (Postgres), looked up by id on hover ───────────────────────────
   - name: items
@@ -116,11 +131,28 @@ entities:
       columns: [product, fetched_at, imported_at]
     api: { load: instant }
 
-actions: [create_plan, check_edit_code]
+# The target actions carry their own copy of resolve_target's checks: an API body can't call
+# another script action (VAN-546).
+actions: [create_plan, unlock_plan, lock_plan, plan_access, rotate_edit_key,
+          add_target, update_target, move_target, remove_target, tick_todo, set_target_notes,
+          find_game_data]
 
-# Open in both: every entity is read-only and both actions check their own input. Editing from
-# the web (unlock_plan, lock_plan, plan_access, tick_todo: written, not listed here) waits for
-# anonymous sessions in Vantage (agents/BRIEF.md "Sessions and unlock", FEEDBACK.md).
+# Per caller (an anonymous visitor or agent counts by its address): every MCP tool call and
+# every action invoke over the socket, whichever action; reads over the socket aren't counted.
+# Each write action has a stricter one of its own (unlock_plan, create_plan, the target actions).
+rate_limit: { per_second: 10, burst: 120 }
+
+# Cloud Run reached directly appends the caller's address to X-Forwarded-For; 2 behind a Google
+# load balancer (docs/deploy.md). Locally there's no header and the socket's peer is used.
+trust_forwarded: true
+
+# Every caller gets an anonymous session (application.yaml `session:`), with no sign-in; what it
+# may change is the plans datasource's rule. check_edit_code is the desktop's now: the page
+# unlocks instead.
 auth:
-  local: none
-  prod: none
+  local: session
+  prod: session
+
+# The same API for AI agents, over MCP at /mcp on the API's own port (one Cloud Run service,
+# one process: agents and browsers share sessions, revokes and rate limits; docs/deploy.md).
+mcp: { mount: main }

@@ -6,5 +6,12 @@ profiles:
   local: { env_file: .env }      # the composer.yaml stack; the desktop's default
   prod: { env_file: .env.prod }  # Cloud SQL and Atlas; Cloud Run passes the same keys
 
-# No session: block yet. Editing from the web waits for anonymous sessions in Vantage
-# (agents/BRIEF.md "Sessions and unlock", FEEDBACK.md).
+# Every web visitor and MCP agent gets a session of its own, in memory, with no sign-in; it
+# ends after an hour unused. `plans` lists the plans it unlocked with their edit keys
+# (unlock_plan); the plans datasource's rule refuses edits to any other plan
+# (agents/BRIEF.md "Sessions and unlock").
+session:
+  anonymous: true
+  idle: 3600
+  fields:
+    plans: { list: true }

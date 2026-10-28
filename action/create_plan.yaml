@@ -5,21 +5,29 @@
 # race/class pair against the build's class_race_combos, one side per plan. Returns the share id
 # and the edit code; only the code's SHA-256 is stored. The code is 4 characters, short enough
 # to paste into WoW chat; brute force is the API rate limit's job (BRIEF.md, Editing plans).
+# The new plan is unlocked in the caller's session (session.plans), as after unlock_plan.
 #
 # generate_password(n) is the stdlib's random source (no 0 1 I O l). A general random function
 # is noted in FEEDBACK.md.
 kind: script
+description: >
+  Make a new plan: a name and one or two characters, each { name, race_id, class_id } (a
+  race and class pair from class_race_combos; both characters on one side). The plan is
+  unlocked in this session. Returns { id, edit_code }: id is the plan's link id, edit_code the
+  key that unlocks it elsewhere, shown only this once. Rate-limited: five plans, then one
+  every 20 seconds.
+rate_limit: { per_second: 0.05, burst: 5 }
 dialog:
   title: Create plan
 body: |
   let name = if args.name == () { "" } else { `${args.name}` };
   name.trim();
-  if name.len() == 0 { throw "Give the plan a name"; }
-  if name.len() > 120 { throw "The plan name is too long (120 characters at most)"; }
+  if name.len() == 0 { fail("Give the plan a name"); }
+  if name.len() > 120 { fail("The plan name is too long (120 characters at most)"); }
 
   let chars = args.characters;
   if type_of(chars) != "array" || chars.len() < 1 || chars.len() > 2 {
-    throw "A plan has one or two characters";
+    fail("A plan has one or two characters");
   }
 
   let side = ();
@@ -29,18 +37,18 @@ body: |
   for c in chars {
     let cname = if c.name == () { "" } else { `${c.name}` };
     cname.trim();
-    if cname.len() == 0 { throw "Every character needs a name"; }
-    if cname.len() > 40 { throw `"${cname}" is too long for a character name`; }
+    if cname.len() == 0 { fail("Every character needs a name"); }
+    if cname.len() > 40 { fail(`"${cname}" is too long for a character name`); }
     // names are how players pick a character later, so two can't differ only in case
-    if names.contains(cname.to_lower()) { throw "The two characters need different names"; }
+    if names.contains(cname.to_lower()) { fail("The two characters need different names"); }
     names.push(cname.to_lower());
 
     let race_id = parse_int(`${c.race_id}`);
     let class_id = parse_int(`${c.class_id}`);
     let combo = table("class_race_combo").where("race_id", race_id).where("class_id", class_id).first();
-    if combo == () { throw `That race and class can't be created in this build`; }
+    if combo == () { fail(`That race and class can't be created in this build`); }
     if side != () && combo.side != side {
-      throw "Both characters must be on the same side: Alliance or Horde";
+      fail("Both characters must be on the same side, Alliance or Horde");
     }
     side = combo.side;
 
@@ -71,7 +79,7 @@ body: |
   let id = generate_password(7);
   let tries = 1;
   while table("plan").where("_id", id).count() > 0 {
-    if tries >= 10 { throw "Couldn't find a free plan id; try again"; }
+    if tries >= 10 { fail("Couldn't find a free plan id; try again"); }
     id = generate_password(7);
     tries += 1;
   }
@@ -89,6 +97,8 @@ body: |
     created_at: stamp,
     updated_at: stamp,
   });
+  // whoever made the plan may edit it in this session; the characters below are its first edit
+  if !session.is_desktop() { session.add("plans", id); }
   for d in docs {
     d._id = `${id}.${d.key}`;
     d.plan_id = id;

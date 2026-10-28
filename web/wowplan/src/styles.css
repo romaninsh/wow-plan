@@ -227,6 +227,9 @@ button, input, select { font: inherit; color: inherit; }
   width: 17px; height: 17px; margin-top: 4px; position: relative; border-radius: 2px;
   background: linear-gradient(180deg, #f6ebcc, #d2bb86); border: 1px solid #6b4a22; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
 }
+button.tick { padding: 0; cursor: pointer; }
+button.tick:hover { border-color: #2f7a12; }
+button.tick:focus-visible { outline: 1px dotted #6a3d0c; outline-offset: 2px; }
 .tick.done::after {
   content: ""; position: absolute; left: 4px; top: -3px; width: 7px; height: 14px; transform: rotate(40deg);
   border: solid #2f7a12; border-width: 0 3px 3px 0; filter: drop-shadow(0 1px 0 #f6ebcc);
