@@ -1,0 +1,57 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Desktop dialog for a free-text goal. A note has no level, so the bracket is required.
+kind: form
+dialog:
+  title: "Add a note"
+  confirm_label: Add note
+form:
+  fields:
+    - { name: plan_id, type: string, label: Plan link, readonly: true }
+    - { name: title, type: string, label: Note, placeholder: "e.g. Meet up in Brill" }
+    - name: block_id
+      type: string
+      label: "Another bracket (blank = this one)"
+      required: false
+      widget: dropdown
+      option_label: title
+      options: |
+        table("plan_block").where("plan_id", form["plan_id"])
+    - name: character
+      type: string
+      label: "Who (blank = everyone)"
+      required: false
+      widget: dropdown
+      option_value: key
+      option_label: name
+      options: |
+        table("plan_character").where("plan_id", form["plan_id"])
+    - { name: place_search, type: string, label: Find place, required: false }
+    - name: place_zone
+      type: string
+      label: "Place: zone"
+      required: false
+      widget: dropdown
+      option_label: name
+      options: |
+        let s = form["place_search"];
+        if s == () { table("zone").limit(200) } else { table("zone").search(s).limit(50) }
+    - name: place_area
+      type: string
+      label: "Place: town or area"
+      required: false
+      widget: dropdown
+      option_label: name
+      options: |
+        let s = form["place_search"];
+        if s == () { table("area").where("area_id", 0) } else { table("area").search(s).limit(50) }
+    - name: place_dungeon
+      type: string
+      label: "Place: dungeon"
+      required: false
+      widget: dropdown
+      option_label: name
+      options: |
+        let s = form["place_search"];
+        if s == () { table("dungeon").limit(100) } else { table("dungeon").search(s).limit(50) }
+    - { name: notes, type: string, label: Details, multiline: true, required: false }

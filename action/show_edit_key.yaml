@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Shows a freshly made edit key once (only its hash is stored, so it can't be shown again).
+# Not readonly on purpose: a readonly field's text can't be selected or copied (FEEDBACK.md),
+# and nothing reads the field back, so typing in it changes nothing.
+kind: form
+dialog:
+  title: "New edit key"
+  description: "Select the key and copy it now (Cmd-A, Cmd-C in the field), then pass it to whoever edits the plan with you. It is not stored and can't be shown again; changing the text here changes nothing."
+  confirm_label: I copied it
+  size: sm
+form:
+  fields:
+    - { name: edit_key, type: string, label: Edit key }

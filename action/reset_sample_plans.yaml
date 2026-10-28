@@ -1,25 +1,17 @@
 # yaml-language-server: $schema=./action-schema-1.json
 #
-# Applies mongo/schema.js (validators, indexes) and reloads the sample plans from mongo/seed.js
-# inside the running mongo container (composer.yaml mounts mongo/ at /scripts). Only the sample
-# plans are replaced; other plans stay.
+# Reloads the sample plans of the active profile's target, and nothing else:
+# mongo/guides.sh <target> samples runs mongo/seed.js, which deletes and re-inserts only the
+# plans it lists (marked `sample: true`) with their characters, brackets and to-dos. Plans users
+# made are never touched; more samples are added to the list in seed.js. The schema and views
+# are a separate action (update_guides_schema). Called as
+# actions.reset_sample_plans(#{ target: profile.target }).
 kind: terminal
 description: |
-  Re-apply the guides schema and reload the three sample plans (House of Grr, its clone, and a
-  solo hunter). Other plans are kept. Needs the services running.
+  Reload the sample plans on target "${row.target}" (House of Grr, its clone, Grak the
+  patient). Edits made to those plans are lost; every other plan is kept.
 dialog:
-  title: "Reset sample plans"
+  title: "Reset sample plans on ${row.target}"
 terminal:
-  command: docker
-  args:
-    - compose
-    - -f
-    - composer.yaml
-    - exec
-    - -T
-    - mongo
-    - sh
-    - -c
-    - >-
-      mongosh "mongodb://localhost:27017/wowplan?directConnection=true" --quiet --file /scripts/schema.js &&
-      mongosh "mongodb://localhost:27017/wowplan?directConnection=true" --quiet --file /scripts/seed.js
+  command: sh
+  args: ["mongo/guides.sh", "${row.target}", "samples"]

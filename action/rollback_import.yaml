@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Swaps the live reference data (schema wow) with the previous import (wow_prev) in one
+# transaction, on the active profile's target: pipeline/import.sh <target> rollback. Instant; a
+# second rollback undoes the first. Adds a row to the import history. Called as
+# actions.rollback_import(#{ target: profile.target }).
+kind: terminal
+description: |
+  Put the previous import back live on target "${row.target}", in one step. The current one is
+  kept as the previous import, so running this again undoes it. Target prod changes what the
+  live site reads.
+dialog:
+  title: "Roll back ${row.target} to the previous import"
+terminal:
+  command: sh
+  args: ["pipeline/import.sh", "${row.target}", "rollback"]

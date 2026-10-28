@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Desktop dialog for a new plan (Plans page, Create plan): the plan's name, one character and
+# an optional friend. Race and class come as one pick from class_race_combos (value
+# "<race_id>-<class_id>"); create_plan checks the pair, the names and that both are on one side.
+kind: form
+dialog:
+  title: "Create plan"
+  description: "One character, or two playing together. Both must be on the same side."
+  confirm_label: Create plan
+form:
+  fields:
+    - { name: name, type: string, label: Plan name }
+    - { name: char_name, type: string, label: Character name }
+    - name: char_combo
+      type: string
+      label: Race and class
+      widget: dropdown
+      option_label: label
+      options: |
+        table("class_race_combo")
+    - { name: friend_name, type: string, label: "Friend's character (optional)", required: false }
+    - name: friend_combo
+      type: string
+      label: "Friend's race and class"
+      required: false
+      widget: dropdown
+      option_label: label
+      options: |
+        table("class_race_combo")

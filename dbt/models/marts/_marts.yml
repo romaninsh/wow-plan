@@ -10,6 +10,13 @@ models:
     description: One row about the live import - build, product, when its tables were fetched, opendata commit, row counts.
     config: { meta: { pg_primary_key: build } }
 
+  - name: data_coverage
+    description: Counts of items, quests, zones, dungeons, areas and recipes per level bracket (1-10 ... 51-60, over 60, no level), to spot gaps in a build's data.
+    config: { meta: { pg_primary_key: bracket_order } }
+    columns:
+      - name: bracket_order
+        data_tests: [unique, not_null]
+
   # world
   - name: maps
     description: Continents, dungeons, raids and battlegrounds (Map).

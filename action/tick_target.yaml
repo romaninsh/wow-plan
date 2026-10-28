@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Ticks a to-do done, or opens it again. Args: target_id, done: true|false. A to-do is done once,
+# for the whole plan: its characters only say whom it is for, and whoever looks at the page sees
+# it done (the page can't know who is looking). Stores done and done_at (when it was ticked; null
+# when opened again). Returns #{ id, done }.
+#
+# Desktop only, not in api/wowplan.yaml (see add_target).
+kind: script
+dialog:
+  title: Tick to-do
+body: |
+  let target_id = if args.target_id == () { "" } else { `${args.target_id}` };
+  let t = if target_id == "" { () } else { table("plan_target").get(target_id) };
+  if t == () { throw "That to-do doesn't exist (any more)"; }
+  if type_of(args.done) != "bool" { throw "Say whether the to-do is done: true or false"; }
+  let done = args.done;
+
+  table("plan_target").patch(t._id, #{ done: done, done_at: if done { `${now()}` } else { () } });
+  table("plan").patch(t.plan_id, #{ updated_at: `${now()}` });
+  #{ id: t._id, done: done }

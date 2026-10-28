@@ -36,7 +36,7 @@ entities:
     observe: plan_target
     read_only: true
     params:
-      columns: [plan_id, block_id, order, kind, title, characters, ref, count, level, purpose, for_character, done_by, notes]
+      columns: [plan_id, block_id, order, kind, title, characters, ref, place, count, level, purpose, for_character, done, done_at, notes]
       filter: [plan_id, block_id, kind]
       default_sort: order
 
@@ -118,5 +118,9 @@ entities:
 
 actions: [create_plan, check_edit_code]
 
+# Open in both: every entity is read-only and both actions check their own input. Editing from
+# the web (unlock_plan, lock_plan, plan_access, tick_todo: written, not listed here) waits for
+# anonymous sessions in Vantage (agents/BRIEF.md "Sessions and unlock", FEEDBACK.md).
 auth:
   local: none
+  prod: none

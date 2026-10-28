@@ -1,0 +1,9 @@
+# yaml-language-server: $schema=./action-schema-1.json
+kind: confirm
+dialog:
+  title: "Make a new edit key?"
+  description: "The current key stops working at once, for everyone who has it. The new key is shown once; copy it before closing."
+  confirm_label: Make new key
+  cancel_label: Keep current key
+  confirm_style: danger
+  size: sm

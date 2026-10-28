@@ -1,0 +1,22 @@
+# yaml-language-server: $schema=./view-schema-1.json
+#
+# The Brackets page's drawer: the selected bracket's title, levels and notes, edited in place
+# with the built-in record form (Save / Revert). The admin is trusted, so this skips
+# update_block's checks (overlaps, renumbering by level, level notes); use the Change levels
+# row action for a checked change. zones (an embedded array) is not offered.
+# MongoDB's validator rejects levels outside 1-60 (a failed save shows the raw driver error,
+# so the limits are stated above the form). It does not check From <= To: an inverted range
+# is stored as typed and covers no level; Change levels refuses one.
+args:
+  id: { type: string, required: true }
+body:
+  - kind: label
+    params:
+      text: "Levels 1-60, From not above To. Saved as typed: use Change levels for overlap checks and renumbering."
+      style: muted
+  - kind: form
+    observe: plan_block
+    record: "${args.id}"
+    params:
+      id_column: _id
+      fields: [title, min_level, max_level, notes]

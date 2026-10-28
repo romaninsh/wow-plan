@@ -1,0 +1,10 @@
+# The usual menu, pages in a stack: Back and breadcrumbs, like a mobile app (layout/admin.yaml).
+layout: admin
+home: plans
+
+profiles:
+  local: { env_file: .env }      # the composer.yaml stack; the desktop's default
+  prod: { env_file: .env.prod }  # Cloud SQL and Atlas; Cloud Run passes the same keys
+
+# No session: block yet. Editing from the web waits for anonymous sessions in Vantage
+# (agents/BRIEF.md "Sessions and unlock", FEEDBACK.md).

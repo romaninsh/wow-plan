@@ -1,0 +1,47 @@
+# yaml-language-server: $schema=./page-schema-1.json
+#
+# Every import and rollback of the active profile's reference database (wow_meta.import_history,
+# written by pipeline/publish.py): which build, what came in, how it ended. Re-import a run's
+# build from here (when a newer client build turns out broken); Roll back import on the Data
+# page swaps back to the previous import in one step. Its own page, not the Data page's: the
+# table only exists once the database's first recorded import has run, and the Data page holds
+# the button that runs it.
+title: Import history
+body:
+  - kind: label
+    params: { text: "Imports into ${profile.target}", style: heading, icon: Clock }
+  - kind: grid
+    name: history
+    observe: import_history
+    params:
+      default_sort: { column: id, direction: desc }
+      refresh_interval: 10
+      row_color: { column: status, color: { danger: [failed] } }
+      columns:
+        id: { label: Run, width: 50 }
+        finished_at: { label: Finished, width: 120, render: relative }
+        action: { label: Action, width: 80, labels: { import: Import, rollback: Rollback } }
+        status: { label: Outcome, width: 100, color: { success: [ok], danger: [failed], warning: [rolled back] } }
+        build: { label: Build, width: 110, pin: true }
+        duration_s: { label: Seconds, width: 70 }
+        tables: { label: Tables, width: 60 }
+        total_rows: { label: Rows, width: 80 }
+        items: { label: Items, width: 70 }
+        quests: { label: Quests, width: 60 }
+        zones: { label: Zones, width: 60 }
+        dungeons: { label: Dungeons, width: 70 }
+        npcs: { label: NPCs, width: 60 }
+        recipes: { label: Recipes, width: 70 }
+        opendata_commit: { label: Opendata, width: 80 }
+        code_commit: { label: Code, width: 120 }
+        message: { label: Message, width: 300 }
+      row_actions:
+        - label: Re-import this build
+          icon: RotateCcw
+          when: 'row.build != ""'
+          action: |
+            actions.import_build(#{ target: row.target, build: row.build });
+  - kind: label
+    params:
+      text: "Re-import rebuilds from that build's fetched files (refs/wago/<build>) with today's transforms and the current opendata; if the files are gone, Fetch build that build first. Roll back import (Data page) is the one-step undo of the last import."
+      style: muted

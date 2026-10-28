@@ -1,0 +1,108 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Changes a level bracket. Args: block_id, min_level?, max_level?, title? ("" = the default
+# "Levels 20-30"; a default title follows a new range, one the player wrote stays). The same
+# range rules as add_block (1-60, no overlap beyond one shared edge level, a one-level bracket
+# touches no other). Level fit is never refused (agents/BRIEF.md): when the new range leaves
+# targets whose level it doesn't cover (resolve_target's rule: needed levels while <= max_level,
+# levels to reach while inside the range), level_note names them for the agent to mention.
+# Orders are renumbered by level afterwards.
+# Returns #{ id, order, min_level, max_level, title, level_note }.
+#
+# Desktop only, not in api/wowplan.yaml (see add_target).
+kind: script
+dialog:
+  title: Change bracket
+body: |
+  fn int_of(v, what) {
+    if v == () { return (); }
+    let t = type_of(v);
+    if t == "i64" { return v; }
+    if t == "f64" {
+      if v == v.to_int() { return v.to_int(); }
+      throw `${what} must be a whole number`;
+    }
+    if t == "string" {
+      let s = v;
+      s.trim();
+      if s.len() == 0 { return (); }
+      for i in 0..s.len() { if !"0123456789".contains(s.sub_string(i, 1)) { throw `${what} must be a whole number`; } }
+      if s.len() > 9 { throw `${what} is too large`; }
+      return parse_int(s);
+    }
+    throw `${what} must be a whole number`;
+  }
+
+  let block_id = if args.block_id == () { "" } else { `${args.block_id}` };
+  let b = if block_id == "" { () } else { table("plan_block").get(block_id) };
+  if b == () { throw "That bracket doesn't exist (any more)"; }
+  let plan_id = b.plan_id;
+
+  let min = int_of(args.min_level, "The first level") ?? b.min_level;
+  let max = int_of(args.max_level, "The last level") ?? b.max_level;
+  if min < 1 || max > 60 { throw "Levels go from 1 to 60"; }
+  if min > max { throw `A bracket can't start at ${min} and end at ${max}`; }
+
+  // a default title follows the range; one the player wrote stays
+  let old_default = `Levels ${b.min_level}-${b.max_level}`;
+  let title = if b.title == old_default { `Levels ${min}-${max}` } else { b.title };
+  if "title" in args {
+    let given = if args.title == () { "" } else { `${args.title}` };
+    given.trim();
+    if given.len() == 0 || given == old_default { given = `Levels ${min}-${max}`; }
+    if given.len() > 120 { throw "The bracket title is too long (120 characters at most)"; }
+    title = given;
+  }
+
+  for o in table("plan_block").where("plan_id", plan_id).list() {
+    if o._id == b._id { continue; }
+    if o.min_level == min && o.max_level == max { throw `This plan already has a ${min}-${max} bracket`; }
+    if o.min_level < max && min < o.max_level {
+      throw `Levels ${min}-${max} overlap the ${o.min_level}-${o.max_level} bracket; brackets may share one edge level (10-20 and 20-30) but no more`;
+    }
+    if (min == max || o.min_level == o.max_level) && o.min_level <= max && min <= o.max_level {
+      throw `Levels ${min}-${max} share level ${if min == max { min } else { o.min_level }} with the ${o.min_level}-${o.max_level} bracket; a one-level bracket can't touch another bracket`;
+    }
+  }
+
+  // resolve_target's rule: a needed level fits while it is <= max_level, a level to reach while
+  // it is inside min-max. Targets the change pushes out are only named in level_note.
+  let fits = |kind, lvl, lo, hi| if kind == "reach_level" { lvl >= lo && lvl <= hi } else { lvl <= hi };
+  let level_note = ();
+  if min != b.min_level || max != b.max_level {
+    let outside = "";
+    let n = 0;
+    for t in table("plan_target").where("plan_id", plan_id).where("block_id", b._id).sort("order").list() {
+      let lvl = ();
+      try {
+        lvl = actions.resolve_target(#{ plan_id: plan_id, current: t, level_only: true }).level;
+      } catch (e) { lvl = (); }
+      if lvl != () && fits.call(t.kind, lvl, b.min_level, b.max_level) && !fits.call(t.kind, lvl, min, max) {
+        n += 1;
+        if n <= 5 { if outside.len() > 0 { outside += ", "; } outside += `"${t.title}" (level ${lvl})`; }
+      }
+    }
+    if n > 0 {
+      let more = if n > 5 { ` and ${n - 5} more` } else { "" };
+      level_note = `Levels ${min}-${max} no longer cover ${outside}${more}`;
+    }
+  }
+
+  table("plan_block").patch(b._id, #{ min_level: min, max_level: max, title: title });
+
+  let all = table("plan_block").where("plan_id", plan_id).sort("min_level").sort("max_level").list();
+  let big = 1000;
+  for o in all { if o.order >= big { big = o.order + 1; } }
+  let sorted = true;
+  let i = 0;
+  for o in all { i += 1; if o.order != i { sorted = false; } }
+  let order = b.order;
+  if !sorted {
+    i = 0;
+    for o in all { i += 1; table("plan_block").patch(o._id, #{ order: big + i }); }
+    i = 0;
+    for o in all { i += 1; table("plan_block").patch(o._id, #{ order: i }); if o._id == b._id { order = i; } }
+  }
+  table("plan").patch(plan_id, #{ updated_at: `${now()}` });
+
+  #{ id: b._id, order: order, min_level: min, max_level: max, title: title, level_note: level_note }

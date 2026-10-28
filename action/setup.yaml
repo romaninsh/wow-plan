@@ -54,4 +54,4 @@ steps:
           style: primary
           # language=rhai
           action: |
-            actions.import_build();
+            actions.import_build(#{ target: profile.target, build: "" });

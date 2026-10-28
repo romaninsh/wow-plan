@@ -15,10 +15,11 @@ columns:
     label: Cloned from
     type: string
     references: { table: plan, kind: has_one, name: original }
+  # true on the plans mongo/seed.js owns: Reset sample plans reloads these and no others
+  - { name: sample, label: Sample, type: bool, flags: [calculated] }
   - { name: created_at, label: Created, type: timestamp, time_precision: minutes, flags: [calculated] }
   - { name: updated_at, label: Updated, type: timestamp, time_precision: minutes, flags: [calculated] }
+# No has_many to characters, brackets or to-dos: those are only ever shown for one plan, on its
+# own pages (Plan, Brackets, To-dos), never as a related list that could be opened on its own.
 references:
-  characters: { table: plan_character, kind: has_many, foreign_key: plan_id }
-  blocks: { table: plan_block, kind: has_many, foreign_key: plan_id }
-  targets: { table: plan_target, kind: has_many, foreign_key: plan_id }
   clones: { table: plan, kind: has_many, foreign_key: forked_from }

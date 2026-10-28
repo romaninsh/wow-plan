@@ -1,0 +1,11 @@
+# yaml-language-server: $schema=./table-schema-1.json
+# Continents, dungeons, raids and battlegrounds (dbt mart maps, from Map). Read-only.
+datasource: wow
+title: Maps
+table: maps
+columns:
+  - { name: map_id, label: Map ID, type: int, flags: [id] }
+  - { name: name, label: Map, type: string, flags: [title, searchable] }
+  - { name: instance_type_name, label: Type, type: string }
+  - { name: max_players, label: Max players, type: int }
+  - { name: directory, label: Directory, type: string }

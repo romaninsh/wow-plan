@@ -1,0 +1,74 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Adds a target to a plan. Args:
+#   plan_id, kind, ref?: #{ item_id | quest_id | zone_id | area_id | lfg_dungeon_id |
+#   skill_line_id | recipe_spell_id: int }, title?, characters?: [key or name], count?, level?,
+#   purpose?: sell|use|give, for_character?, notes?, block_id?, place?: #{ zone_id |
+#   lfg_dungeon_id | area_id: int }
+# Every check (game ids, characters, place, which bracket) is resolve_target's; see that file
+# for the level that picks a bracket when none is given. A bracket that is given is always
+# accepted; level_note says when the level disagrees with it (not a refusal: the agent decides).
+# The target goes last in its bracket, with the id <plan_id>.t<bracket order><nn> (the highest
+# nn of that prefix + 1; ids are opaque after that).
+# Returns #{ id, block_id, place, level_note }.
+#
+# Desktop only, not in api/wowplan.yaml: production serves that API without sign-in. Editing
+# opens to players with vantage-server 1.10 sessions (an unlock scoped to one plan).
+kind: script
+dialog:
+  title: Add target
+body: |
+  // a nested action's throw arrives wrapped ("actions.x: Runtime error: … (line …)"); pass on
+  // only the player's message
+  fn plain(e) {
+    let s = `${e}`;
+    loop {
+      let changed = false;
+      if s.starts_with("actions.") {
+        let i = s.index_of(": ");
+        if i > 0 { s = s.sub_string(i + 2, s.len() - i - 2); changed = true; }
+      }
+      if s.starts_with("Runtime error: ") { s = s.sub_string(15, s.len() - 15); changed = true; }
+      if !changed { break; }
+    }
+    let i = s.index_of(" (line ");
+    if i > 0 { s = s.sub_string(0, i); }
+    s
+  }
+
+  let input = args;
+  input.current = ();
+  let r = ();
+  try { r = actions.resolve_target(input); } catch (e) { throw plain(e); }
+  let plan_id = r.plan_id;
+
+  let last = 0;
+  for t in table("plan_target").where("plan_id", plan_id).where("block_id", r.block_id).list() {
+    if t.order != () && t.order > last { last = t.order; }
+  }
+
+  let prefix = `${plan_id}.t${r.block_order}`;
+  let nn = 0;
+  for id in table("plan_target").where("plan_id", plan_id).ids() {
+    if id.starts_with(prefix) {
+      let rest = id.sub_string(prefix.len(), id.len() - prefix.len());
+      let digits = rest.len() == 2;
+      for i in 0..rest.len() { if !"0123456789".contains(rest.sub_string(i, 1)) { digits = false; } }
+      if digits { let n = parse_int(rest); if n > nn { nn = n; } }
+    }
+  }
+  let id = "";
+  loop {
+    nn += 1;
+    id = if nn < 10 { `${prefix}0${nn}` } else { `${prefix}${nn}` };
+    if table("plan_target").get(id) == () { break; }
+  }
+
+  let doc = r.fields;
+  doc._id = id;
+  doc.plan_id = plan_id;
+  doc.order = last + 1;
+  table("plan_target").insert(doc);
+  table("plan").patch(plan_id, #{ updated_at: `${now()}` });
+
+  #{ id: id, block_id: r.block_id, place: doc.place, level_note: r.level_note }

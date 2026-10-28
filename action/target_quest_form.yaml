@@ -1,0 +1,68 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Desktop dialog for a new quest target. The quest data covers only quests players have seen;
+# a quest that isn't there yet is added by title only (pick nothing, type the title).
+kind: form
+dialog:
+  title: "Add a quest"
+  description: "Pick the quest, or leave it empty and type its title if it isn't in the data yet. It goes in this bracket unless you pick another."
+  confirm_label: Add quest
+  size: lg
+form:
+  fields:
+    - { name: plan_id, type: string, label: Plan link, readonly: true }
+    - name: quest
+      type: string
+      label: Quest
+      required: false
+      widget: dropdown
+      option_label: name
+      options: |
+        table("quest").limit(200)
+    - { name: title, type: string, label: "Title (blank = the quest's name)", required: false }
+    - name: character
+      type: string
+      label: "Who (blank = everyone)"
+      required: false
+      widget: dropdown
+      option_value: key
+      option_label: name
+      options: |
+        table("plan_character").where("plan_id", form["plan_id"])
+    - name: block_id
+      type: string
+      label: "Another bracket (blank = this one)"
+      required: false
+      widget: dropdown
+      option_label: title
+      options: |
+        table("plan_block").where("plan_id", form["plan_id"])
+    - { name: place_search, type: string, label: Find place, placeholder: "e.g. Brill", required: false }
+    - name: place_zone
+      type: string
+      label: "Place: zone"
+      required: false
+      widget: dropdown
+      option_label: name
+      options: |
+        let s = form["place_search"];
+        if s == () { table("zone").limit(200) } else { table("zone").search(s).limit(50) }
+    - name: place_area
+      type: string
+      label: "Place: town or area"
+      required: false
+      widget: dropdown
+      option_label: name
+      options: |
+        let s = form["place_search"];
+        if s == () { table("area").where("area_id", 0) } else { table("area").search(s).limit(50) }
+    - name: place_dungeon
+      type: string
+      label: "Place: dungeon"
+      required: false
+      widget: dropdown
+      option_label: name
+      options: |
+        let s = form["place_search"];
+        if s == () { table("dungeon").limit(100) } else { table("dungeon").search(s).limit(50) }
+    - { name: notes, type: string, label: Notes, multiline: true, required: false }

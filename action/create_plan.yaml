@@ -3,7 +3,8 @@
 # Creates a plan from the web intro screen: a name and one or two characters (name, race_id,
 # class_id). Everything is checked here, not in the page: the name, 1-2 characters, each
 # race/class pair against the build's class_race_combos, one side per plan. Returns the share id
-# and the edit code; only the code's SHA-256 is stored.
+# and the edit code; only the code's SHA-256 is stored. The code is 4 characters, short enough
+# to paste into WoW chat; brute force is the API rate limit's job (BRIEF.md, Editing plans).
 #
 # generate_password(n) is the stdlib's random source (no 0 1 I O l). A general random function
 # is noted in FEEDBACK.md.
@@ -24,11 +25,15 @@ body: |
   let side = ();
   let docs = [];
   let keys = [];
+  let names = [];
   for c in chars {
     let cname = if c.name == () { "" } else { `${c.name}` };
     cname.trim();
     if cname.len() == 0 { throw "Every character needs a name"; }
     if cname.len() > 40 { throw `"${cname}" is too long for a character name`; }
+    // names are how players pick a character later, so two can't differ only in case
+    if names.contains(cname.to_lower()) { throw "The two characters need different names"; }
+    names.push(cname.to_lower());
 
     let race_id = parse_int(`${c.race_id}`);
     let class_id = parse_int(`${c.class_id}`);
@@ -41,8 +46,10 @@ body: |
 
     // a short handle from the name: lowercase letters and digits
     let key = "";
-    for ch in cname.to_lower().chars() {
-      if (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') { key += ch; }
+    let lower = cname.to_lower();
+    for i in 0..lower.len() {
+      let ch = lower.sub_string(i, 1);
+      if "abcdefghijklmnopqrstuvwxyz0123456789".contains(ch) { key += ch; }
     }
     if key.len() > 20 { key = key.sub_string(0, 20); }
     if key.len() == 0 { key = `c${docs.len() + 1}`; }
@@ -68,7 +75,7 @@ body: |
     id = generate_password(7);
     tries += 1;
   }
-  let code = generate_password(12);
+  let code = generate_password(4);
   let info = table("build_info").first();
   let stamp = `${now()}`;
 

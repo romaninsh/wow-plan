@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=./view-schema-1.json
+#
+# The Plans page's drawer: the selected plan's name and description, edited in place with the
+# built-in record form (Save / Revert). The admin is trusted; MongoDB's validator still
+# applies (name 1-120 characters). The edit key, side and build are not offered.
+# A failed save shows the raw driver error, so the name limit is stated above the form.
+args:
+  id: { type: string, required: true }
+body:
+  - kind: label
+    params: { text: "Plan name 1-120 characters.", style: muted }
+  - kind: form
+    observe: plan
+    record: "${args.id}"
+    params:
+      id_column: _id
+      fields: [name, description]

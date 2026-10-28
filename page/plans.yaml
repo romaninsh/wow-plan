@@ -1,21 +1,85 @@
 # yaml-language-server: $schema=./page-schema-1.json
+#
+# Every plan, for the admin. A grid, not a binder: a binder's built-in Delete would remove a
+# plan and orphan its characters, brackets and to-dos, and it can't be switched off. The
+# selected plan's name and description are edited in the drawer (view/plan_edit.yaml, the
+# built-in record form). Row actions open the plan's pages; New edit key runs rotate_edit_key
+# and shows the key once. Create plan runs create_plan, the same action the web app uses.
+# No refresh_interval here: polling `plan` remounts every open Plan page (its record:) on each
+# poll; plans is a base collection, so its change stream keeps this grid current anyway.
 title: Plans
 body:
-  - kind: binder
+  - kind: row
+    children:
+      - kind: button
+        name: create_plan_button
+        params:
+          label: Create plan
+          icon: Plus
+          style: primary
+          # The dialog opens outside the try (a cancel stops the body quietly); errors from the
+          # action are toasted as its own sentence (actions.plain_error).
+          action: |
+            let r = actions.plan_create_form();
+            let res = ();
+            try {
+              let pick = |combo| { let p = `${combo}`.split("-"); #{ race_id: parse_int(p[0]), class_id: parse_int(p[1]) } };
+              let first = pick.call(r.char_combo);
+              first.name = r.char_name;
+              let chars = [first];
+              if r.friend_name != () || r.friend_combo != () {
+                if r.friend_name == () || r.friend_combo == () { throw "Give the friend's character both a name and a race and class"; }
+                let second = pick.call(r.friend_combo);
+                second.name = r.friend_name;
+                chars.push(second);
+              }
+              res = actions.create_plan(#{ name: r.name, characters: chars });
+            } catch (e) {
+              toast(actions.plain_error(#{ error: `${e}` }).message, "error");
+            }
+            if res != () {
+              toast(`Plan ${r.name} created (wow-plan.com/${res.id})`, "success");
+              actions.show_edit_key(#{ edit_key: res.edit_code });
+            }
+      # grids have no per-row buttons (row actions live in the ⋯ menu, see FEEDBACK.md), so the
+      # explicit way in is this button over the selected row (also: double-click, ⋯ → Open plan)
+      - kind: button
+        name: open_plan_button
+        enabled: 'plans.selected_id != ""'
+        params:
+          label: Open plan
+          icon: ExternalLink
+          action: 'open("plan", #{ id: plans.selected_id });'
+      - kind: button
+        name: reset_samples_button
+        params:
+          label: Reset sample plans
+          icon: RefreshCw
+          # only the plans mongo/seed.js lists, on the active profile's target (TARGET)
+          action: |
+            actions.reset_sample_plans(#{ target: profile.target });
+
+  - kind: grid
     name: plans
     observe: plan
     params:
+      search: true
       default_sort: { column: created_at, direction: desc }
-      toolbar:
-        - label: "Reset sample plans"
-          icon: RefreshCw
-          # language=rhai
-          action: |
-            actions.reset_sample_plans();
+      drawer: { view: plan_edit, height: 360 }
       columns:
         name: { label: Plan, width: 220, pin: true }
         _id: { label: Link ID, width: 90 }
-        description: { label: Description, width: 420 }
+        side: { label: Side, width: 80, color: { blue: [Alliance], red: [Horde] } }
+        sample: { label: Sample, width: 70, labels: { "true": Sample, "false": "" }, color: { muted: ["true"] }, tooltip: "Reset sample plans reloads these, and only these" }
+        description: { label: Description, width: 380 }
         forked_from: { label: Cloned from, width: 160, link: plan }
         game_build: { label: Game build, width: 110 }
-        created_at: { label: Created, width: 140 }
+        created_at: { label: Created, width: 120, render: relative }
+        updated_at: { label: Updated, width: 120, render: relative }
+      row_actions:
+        - label: Open plan
+          icon: ExternalLink
+          navigate: plan
+          args: { id: "row._id" }
+          triggers: { double_click: true }
+        # Everything else about a plan is on its own page (one path: Plans → plan → bracket → place)

@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Turns a caught error into the sentence a player should read. A nested action's throw arrives
+# wrapped ("actions.add_target: Runtime error: actions.resolve_target: Runtime error: No bracket
+# covers level 23; … (line 3, column 17)" plus a code excerpt); this strips the prefixes and cuts
+# at " (line ". Args: error (the caught value as text). Returns #{ message }. Writes nothing.
+# Used by the Guides pages' buttons and row actions (plans, brackets, todos, plan); desktop
+# only, not in api/wowplan.yaml.
+kind: script
+dialog:
+  title: Plain error
+body: |
+  let s = if args.error == () { "Something went wrong" } else { `${args.error}` };
+  loop {
+    let changed = false;
+    if s.starts_with("actions.") {
+      let i = s.index_of(": ");
+      if i > 0 { s = s.sub_string(i + 2, s.len() - i - 2); changed = true; }
+    }
+    if s.starts_with("Runtime error: ") { s = s.sub_string(15, s.len() - 15); changed = true; }
+    if !changed { break; }
+  }
+  let i = s.index_of(" (line ");
+  if i > 0 { s = s.sub_string(0, i); }
+  #{ message: s }

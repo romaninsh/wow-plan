@@ -1,0 +1,36 @@
+# yaml-language-server: $schema=./view-schema-1.json
+#
+# The To-dos binder's first tab: what a to-do is about, read-only (the embedded reference,
+# place, owners and ticks, which the Details form leaves out).
+title: Summary
+table: plan_target
+body:
+  - kind: label
+    text: "${record.title}"
+    style: heading
+  - kind: label
+    text: "${record.kind}"
+    style: muted
+  - kind: separator
+    label: Game data
+  - kind: label
+    text: "${record.ref.name}"
+    secondary: Reference
+  - kind: label
+    text: "${record.place.name}"
+    secondary: Place
+  - kind: separator
+    label: Characters
+  - kind: label
+    text: "${record.characters}"
+    secondary: "For (character keys; empty = everyone)"
+  - kind: separator
+    label: Done
+  - kind: label
+    when: 'record.done == true'
+    text: "Done ${date_relative(record.done_at)}"
+    secondary: "For the whole plan"
+  - kind: label
+    when: 'record.done != true'
+    text: "Open"
+    style: muted

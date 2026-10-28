@@ -32,6 +32,46 @@ Three layers:
    share link (`/p/<id>`) and an edit link (`/p/<id>#edit=<code>`); the code goes into a cookie
    and the server says whether it edits. MCP access for AI agents comes later.
 
+## Editing plans (decided 2026-10-28)
+
+- **Main interaction is an AI agent over MCP** (built into vantage-server 1.10: it exposes the
+  vista and calls our actions). Typical session: "good gear for a rogue at 20?" → the agent
+  searches the reference data and names options (never ranks them); "Robes of Arugal drop in
+  SFK, add for Lin" → one `add_target` action.
+- **Edit key:** 4 characters, copy-paste (e.g. into WoW chat to a friend). Only its hash is
+  stored. Brute force is the API's rate limit's job, not ours.
+- **Unlock:** a visual unlock on the plan page (lock button, type the key); it changes the
+  session so the editing actions open up for that plan, remembered on the device. Replaces
+  the `#edit=` link. Needs session support in the 1.10 API: build after it lands.
+- **Targets belong to a level bracket (block) and a place** (zone, dungeon or area). The page
+  groups a bracket's targets by place; a place stays open until all its targets are ticked
+  (SFK stays on the list while something there is left to farm). More associations later.
+- **Level fit is loose, not a rule** (2026-10-28, replaces "everything in a block must fit its
+  range"): players get items they can't equip yet and go back to low-level zones. With no
+  bracket named, a target goes into the bracket covering its level; a named bracket is always
+  accepted, and a level mismatch only comes back as a note for the agent to mention. Nothing is
+  refused for level; the MCP agent building the plan decides.
+- **Sessions and unlock (decided 2026-10-28; waits for Vantage, see FEEDBACK.md):**
+  - Two kinds of visitor: one with a plan's id (reads that plan only: no listing, a plan's
+    characters, brackets and to-dos reachable only from the plan) and one who also has its
+    edit key.
+  - A WebSocket connection is a session: every connection gets one, in memory, with no sign-in.
+    It ends after **1 hour without activity** (updates are cheap in memory, so it tracks last
+    access and the like). A reload or second tab resumes it with its token.
+  - Unlocking sends the key; the server adds the plan to the session's list of plans, and the
+    session may then edit those plans. Several plans can be unlocked at once.
+  - **Each device unlocks on its own** with the key (every device is its own session; no
+    accounts).
+  - One write rule on the server refuses edits to plans not in the session's list, for the
+    web page and MCP agents alike. A new edit key also revokes that plan from every session.
+  - A desktop **Sessions** page lists who is connected (which page/plan, last access) and can
+    **grant** edit on a plan to a session (support) as well as revoke it or disconnect.
+  - Rate limit on unlocking (4-character keys).
+  - Until Vantage has anonymous sessions the web app stays read-only; the action files
+    unlock_plan, lock_plan, plan_access and tick_todo are kept for then, unlisted from the API.
+- **Order:** actions and Guides pages in the Vantage desktop first (full access there), then
+  the API/MCP and the web unlock once 1.10 is out.
+
 ## Data notes
 
 - **No drop sources, by decision.** Who drops an item is not in the data and won't be added

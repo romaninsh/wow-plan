@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Gives a plan a new edit key; the old one stops working. Args: plan_id. The key is 4
+# characters from generate_password(4), as in create_plan; only hash_secret(key) is stored.
+# Returns #{ edit_key }: show it once, it can't be read back.
+#
+# Desktop only, not in api/wowplan.yaml (see add_target).
+kind: script
+dialog:
+  title: New edit key
+body: |
+  let plan_id = if args.plan_id == () { "" } else { `${args.plan_id}` };
+  let plan = if plan_id == "" { () } else { table("plan").get(plan_id) };
+  if plan == () { throw "That plan doesn't exist"; }
+
+  let key = generate_password(4);
+  table("plan").patch(plan._id, #{ edit_code_hash: hash_secret(key), updated_at: `${now()}` });
+  #{ edit_key: key }

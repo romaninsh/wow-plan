@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=./form-schema-1.json
+#
+# The To-dos binder's Details tab: only the plain fields. The embedded reference, place,
+# characters and ticks are never in this form (a save would write them back as text); they
+# change through the row actions, which look things up and check them.
+title: To-do
+table: plan_target
+max_columns: 2
+body:
+  - { name: title, label: To-do, span: full }
+  - { name: count, label: How many }
+  - { name: purpose, label: What for, choices: [use, sell, give], required: false }
+  - { name: notes, label: Notes, multiline: 3, span: full }

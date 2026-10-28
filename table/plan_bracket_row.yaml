@@ -1,0 +1,22 @@
+# yaml-language-server: $schema=./table-schema-1.json
+# One bracket of a plan with its to-do figures: MongoDB view `plan_bracket_rows`
+# (mongo/views.js), for the plan overview's bracket list. Read-only; status is "done" once the
+# bracket has to-dos and every one is ticked by all its characters.
+datasource: plans
+title: Brackets with progress
+table: plan_bracket_rows
+mongo: { view: true }
+columns:
+  - { name: _id, label: ID, type: string, flags: [id, hidden] }
+  - { name: plan_id, label: Plan, type: string, flags: [hidden] }
+  - { name: order, label: Order, type: int }
+  - { name: title, label: Bracket, type: string, flags: [title, searchable] }
+  - { name: levels, label: Levels, type: string }
+  - { name: min_level, label: From level, type: int }
+  - { name: max_level, label: To level, type: int }
+  - { name: notes, label: Notes, type: string }
+  - { name: todo_count, label: To-dos, type: int }
+  - { name: done_count, label: Done, type: int }
+  - { name: place_count, label: Places, type: int }
+  - { name: status, label: Status, type: string, enum: [open, done] }
+  - { name: progress, label: Progress, type: string }

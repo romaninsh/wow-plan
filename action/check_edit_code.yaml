@@ -1,7 +1,8 @@
 # yaml-language-server: $schema=./action-schema-1.json
 #
 # Answers whether an edit code opens a plan for editing. The web page keeps codes in cookies and
-# asks here; it never sees the stored hash. Returns { found, editable }.
+# asks here; it never sees the stored hash. Returns { found, editable }. Any length matches:
+# new plans have 4-character codes, plans made before 2026-10-28 keep their 12-character ones.
 kind: script
 dialog:
   title: Check edit code

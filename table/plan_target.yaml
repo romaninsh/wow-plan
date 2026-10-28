@@ -1,6 +1,8 @@
 # yaml-language-server: $schema=./table-schema-1.json
 # A goal inside a level block. ref holds the Blizzard id(s) of what it is about plus a name
-# snapshot; characters / done_by are character keys (empty characters = everyone).
+# snapshot; place is the zone, dungeon or area it is done in (same shape, one id); characters
+# are the keys it is for (empty = everyone), a label only. done is one flag for the whole plan:
+# ticked once, shown done to everyone (the page can't know who is looking).
 datasource: plans
 title: Targets
 table: plan_targets
@@ -27,6 +29,12 @@ columns:
   - { name: for_character, label: For, type: string }
   # embedded arrays and document: not hidden, so the API's generated types include them
   - { name: characters, label: Who, type: string }
-  - { name: done_by, label: Done by, type: string }
+  - { name: done, label: Done, type: bool, flags: [calculated] }
+  - { name: done_at, label: Done on, type: timestamp, time_precision: minutes, flags: [calculated] }
   - { name: ref, label: Reference, type: string }
+  # place as one flat value (dungeon:7, zone:14, area:159, none): what pages filter on
+  - { name: place_key, label: Place key, type: string, flags: [hidden] }
+  # where it is done: { zone_id | lfg_dungeon_id | area_id, name } or empty. A dotted
+  # place.name would be read as a join, so leaves come from a MongoDB view when a page needs them
+  - { name: place, label: Place, type: string }
   - { name: notes, label: Notes, type: string }

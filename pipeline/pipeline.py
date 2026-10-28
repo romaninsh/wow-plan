@@ -4,6 +4,8 @@
   pipeline.py latest            newest Forever build wago.tools lists (any Forever product)
   pipeline.py fetch [build]     download the tables missing for a build (default: latest)
   pipeline.py import [build]    dbt build + publish to Postgres (default: newest fetched build)
+  pipeline.py rollback          swap the live import with the previous one (again to undo)
+Every import and rollback adds a row to wow_meta.import_history (pipeline/publish.py).
 
 Runs the same in the `pipeline` container (composer.yaml) and on the host (.venv). Standard
 library only. Downloads are never repeated: delete refs/wago/<build>/<Table>.csv to fetch it again.
@@ -195,6 +197,17 @@ def cmd_import(build: str | None) -> None:
 
     env = dict(os.environ)
     env["WOW_PG_URL"] = find_pg_url()
+    # what publish.py writes to wow_meta.import_history (WOW_RUN_TARGET and WOW_RUN_CODE_COMMIT
+    # come from pipeline/import.sh on the host)
+    env.update({
+        "WOW_RUN_BUILD": build,
+        "WOW_RUN_PRODUCT": ",".join(meta.get("products", [])),
+        "WOW_RUN_FETCHED_AT": fetched_at,
+        "WOW_RUN_OPENDATA_COMMIT": opendata_commit,
+        "WOW_RUN_STARTED_AT": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "WOW_RUN_STARTED_EPOCH": str(time.time()),
+    })
+    env.setdefault("WOW_RUN_CODE_COMMIT", git_commit())
     scratch = os.environ.get("WOW_SCRATCH")
     if scratch:  # in the container dbt/ is read-only: keep dbt's output in scratch
         Path(scratch).mkdir(parents=True, exist_ok=True)
@@ -217,18 +230,44 @@ def cmd_import(build: str | None) -> None:
     # --full-refresh: every import rebuilds from scratch (seeds whose columns changed included)
     r = subprocess.run(dbt + ["build", "--full-refresh"] + common + ["--vars", dbt_vars], env=env, cwd=DBT_DIR)
     if r.returncode != 0:
+        run_publish(env, ["failed", "dbt build or tests failed; nothing was published"])
         fail("dbt build failed; Postgres was not changed")
 
     say(f"import {build}: publish to Postgres")
     manifest = Path(env.get("DBT_TARGET_PATH", DBT_DIR / "target")) / "manifest.json"
     duckdb_path = env.get("WOW_DUCKDB_PATH", str(ROOT / "data" / "wow.duckdb"))
-    venv_python = ROOT / ".venv" / "bin" / "python"
-    python = str(venv_python) if venv_python.exists() else sys.executable  # needs the duckdb module
-    publish = Path(__file__).resolve().parent / "publish.py"
-    r = subprocess.run([python, "-I", str(publish), str(manifest), duckdb_path, env["WOW_PG_URL"]], env=env)
-    if r.returncode != 0:
+    if run_publish(env, ["publish", str(manifest), duckdb_path]) != 0:
+        run_publish(env, ["failed", "publish failed; the live schema was not swapped"])
         fail("publish failed; the live schema was not swapped")
     say(f"import done: {build} is live in schema wow")
+
+
+def run_publish(env: dict, args: list[str]) -> int:
+    """pipeline/publish.py with a Python that has the duckdb module (the image, or .venv)."""
+    venv_python = ROOT / ".venv" / "bin" / "python"
+    python = str(venv_python) if venv_python.exists() else sys.executable
+    publish = Path(__file__).resolve().parent / "publish.py"
+    return subprocess.run([python, "-I", str(publish)] + args, env=env).returncode  # URL via env
+
+
+def git_commit() -> str:
+    """The project's commit (+ -dirty), when this runs where .git is (not in the container)."""
+    sha = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"],
+                         capture_output=True, text=True).stdout.strip()
+    if not sha:
+        return ""
+    dirty = subprocess.run(["git", "-C", str(ROOT), "status", "--porcelain", "--", "dbt", "seeds", "pipeline"],
+                           capture_output=True, text=True).stdout.strip()
+    return sha + ("-dirty" if dirty else "")
+
+
+def cmd_rollback() -> None:
+    """Swap the live import (schema wow) with the previous one (wow_prev); again to undo."""
+    env = dict(os.environ)
+    env["WOW_PG_URL"] = find_pg_url()
+    env.setdefault("WOW_RUN_CODE_COMMIT", git_commit())
+    if run_publish(env, ["rollback"]) != 0:
+        fail("rollback failed; nothing changed")
 
 
 def main(argv: list[str]) -> None:
@@ -236,12 +275,18 @@ def main(argv: list[str]) -> None:
         say(__doc__.strip())
         return
     cmd, build = argv[0], (argv[1].strip() if len(argv) > 1 and argv[1].strip() else None)
+    # an empty form field reaches us as the unfilled placeholder "${form.build}" (FEEDBACK.md):
+    # that means no build given, i.e. the newest
+    if build and build.startswith("${"):
+        build = None
     if cmd == "latest":
         cmd_latest()
     elif cmd == "fetch":
         cmd_fetch(build)
     elif cmd == "import":
         cmd_import(build)
+    elif cmd == "rollback":
+        cmd_rollback()
     else:
         fail(f"unknown command {cmd!r}")
 

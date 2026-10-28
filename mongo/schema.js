@@ -11,12 +11,12 @@
 const PLAN_ID = "^[0-9A-Za-z]{7}$"; // short share id: 7 random base62 characters
 
 const TARGET_KINDS = [
-  "travel_to_zone",          // ref.zone_id (or ref.area_id for a town or hub)
+  "travel_to_zone",          // ref.zone_id (or ref.area_id for a town or hub); place = the same
   "acquire_item",            // ref.item_id, count
   "complete_quest",          // ref.quest_id when the quest is in the data, else title only
   "reach_profession_level",  // ref.skill_line_id, level
   "craft_item",              // ref.item_id (+ ref.recipe_spell_id), count, purpose
-  "run_dungeon",             // ref.lfg_dungeon_id
+  "run_dungeon",             // ref.lfg_dungeon_id; place = the same dungeon
   "reach_level",             // level (character level)
   "note",                    // free text, no reference
 ];
@@ -37,6 +37,19 @@ const ref = {
   },
 };
 
+// Where a target is done: always a game reference, never free text. Exactly one of zone_id,
+// lfg_dungeon_id or area_id, plus a name snapshot; null or absent = no place. Pages group a
+// block's targets by place; a place is done once all its targets are.
+const ID = { bsonType: ["int", "long"] };
+const placeOf = (field) => ({
+  bsonType: "object", required: [field, "name"], additionalProperties: false,
+  properties: { [field]: ID, name: { bsonType: "string", minLength: 1 } },
+});
+const place = {
+  description: "zone, dungeon or area the target is done in (id + name snapshot), or null",
+  oneOf: [{ bsonType: "null" }, placeOf("zone_id"), placeOf("lfg_dungeon_id"), placeOf("area_id")],
+};
+
 const collections = {
   plans: {
     required: ["_id", "name", "game_build", "created_at"],
@@ -51,6 +64,9 @@ const collections = {
         bsonType: "string", pattern: "^[0-9a-f]{64}$",
         description: "SHA-256 hex of the edit code (Vantage hash_secret); the code itself is never stored",
       },
+      // edit codes are 4 characters from generate_password(4) (create_plan, rotate_edit_key);
+      // plans made before 2026-10-28 keep their 12-character codes, which still work
+
       // Vantage action bodies write now() as RFC 3339 text; the seed writes BSON dates
       created_at: { bsonType: ["date", "string"] },
       updated_at: { bsonType: ["date", "string", "null"] },
@@ -115,13 +131,24 @@ const collections = {
       title: { bsonType: "string", minLength: 1, maxLength: 200 },
       characters: { bsonType: "array", items: { bsonType: "string" }, description: "character keys; empty = everyone" },
       ref: ref,
+      place: place,
+      place_key: {
+        bsonType: "string", pattern: "^(none|(zone|dungeon|area):[0-9]+)$",
+        description: "the place as one flat value (dungeon:7, zone:14, area:159, none), kept in step with place; pages filter on it",
+      },
       count: { bsonType: ["int", "long"], minimum: 1 },
       level: { bsonType: ["int", "long"], minimum: 1, maximum: 300 },
       purpose: { enum: ["sell", "use", "give", null] },
       for_character: { bsonType: ["string", "null"], description: "character key a crafted item is for" },
-      done_by: { bsonType: "array", items: { bsonType: "string" }, description: "character keys that finished it" },
+      done: {
+        bsonType: "bool",
+        description: "done once for the whole plan, whoever it is for (the page can't know who is looking)",
+      },
+      done_at: { bsonType: ["date", "string", "null"], description: "when it was ticked done" },
       notes: { bsonType: ["string", "null"] },
     },
+    // Grouping by place runs over one block's targets (tens of documents), which
+    // plan_block_order already finds; no index of its own.
     indexes: [
       [{ plan_id: 1, block_id: 1, order: 1 }, { name: "plan_block_order" }],
       [{ kind: 1 }, { name: "kind" }],
@@ -143,3 +170,6 @@ for (const [name, spec] of Object.entries(collections)) {
   for (const [keys, options] of spec.indexes) db.getCollection(name).createIndex(keys, options);
   print(`${name}: validator and ${spec.indexes.length} index(es) in place`);
 }
+
+// The desktop's read-only views (plan_target_rows, plan_place_groups, plan_character_rows) are in
+// mongo/views.js, applied with this file by the Update guides schema action (mongo/guides.sh).

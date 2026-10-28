@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Renames a plan or changes its description. Args: plan_id, name? (1-120 characters),
+# description? (up to 2000; "" clears it). Returns #{ id, name, description }.
+#
+# Desktop only, not in api/wowplan.yaml (see add_target).
+kind: script
+dialog:
+  title: Change plan
+body: |
+  let plan_id = if args.plan_id == () { "" } else { `${args.plan_id}` };
+  let plan = if plan_id == "" { () } else { table("plan").get(plan_id) };
+  if plan == () { throw "That plan doesn't exist"; }
+
+  let patch = #{};
+  if "name" in args {
+    let name = `${args.name}`;
+    name.trim();
+    if name.len() == 0 { throw "Give the plan a name"; }
+    if name.len() > 120 { throw "The plan name is too long (120 characters at most)"; }
+    patch.name = name;
+  }
+  if "description" in args {
+    let d = `${args.description}`;
+    d.trim();
+    if d.len() > 2000 { throw "The description is too long (2000 characters at most)"; }
+    patch.description = if d.len() == 0 { () } else { d };
+  }
+  if patch.len() == 0 { throw "Nothing to change: give a name or a description"; }
+  patch.updated_at = `${now()}`;
+  table("plan").patch(plan._id, patch);
+
+  #{ id: plan._id, name: patch.name ?? plan.name, description: if "description" in patch { patch.description } else { plan.description } }

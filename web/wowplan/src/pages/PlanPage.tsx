@@ -4,7 +4,7 @@ import { observer, useCollection, useRecord, useRun } from "@vantage-ui/client/r
 import { useDb } from "../db";
 import type { PlanBlocks, PlanCharacters, PlanTargets } from "../vantage.gen";
 import { getEditCode, rememberPlan, takeEditCodeFromHash } from "../local";
-import { asKeys, asProfessions, asRef, asRefs } from "../shapes";
+import { asKeys, asProfessions, asRef, asRefs, type GameRef } from "../shapes";
 import { GameRefLink } from "../components/GameRef";
 
 /** character key -> name and class colour, for target badges */
@@ -189,9 +189,41 @@ function RefList({ refs }: { refs: ReturnType<typeof asRefs> }) {
   );
 }
 
+/** A to-do is done once for the whole plan, whoever it is for: the page can't know who is
+ *  looking, so its characters are only a label. */
+const isDone = (t: PlanTargets) => t.done === true;
+
+/** A bracket's targets under one place (null: no place). */
+interface PlaceGroup { key: string; place: GameRef | null; targets: PlanTargets[] }
+
+function placeKey(p: GameRef | null): string {
+  if (!p) return "";
+  if (p.zone_id != null) return `zone:${p.zone_id}`;
+  if (p.lfg_dungeon_id != null) return `dungeon:${p.lfg_dungeon_id}`;
+  if (p.area_id != null) return `area:${p.area_id}`;
+  return "";
+}
+
+/** Presentation only: the server's order is kept; groups appear where their first target is,
+ *  except the unlabeled group, which comes first. */
+function groupByPlace(targets: readonly PlanTargets[]): PlaceGroup[] {
+  const none: PlaceGroup = { key: "", place: null, targets: [] };
+  const groups = new Map<string, PlaceGroup>();
+  for (const t of targets) {
+    const place = asRef(t.place);
+    const key = placeKey(place);
+    if (!key) { none.targets.push(t); continue; }
+    let g = groups.get(key);
+    if (!g) groups.set(key, (g = { key, place, targets: [] }));
+    g.targets.push(t);
+  }
+  return [...(none.targets.length > 0 ? [none] : []), ...groups.values()];
+}
+
 const Block = observer(({ block }: { block: PlanBlocks }) => {
   const db = useDb();
   const targets = useCollection(db.plan_targets.where({ block_id: block.id }));
+  const groups = groupByPlace(targets.items);
   const zones = asRefs(block.zones);
   return (
     <section className="panel block">
@@ -203,13 +235,94 @@ const Block = observer(({ block }: { block: PlanBlocks }) => {
         {zones.length > 0 && <span className="block-zones"><RefList refs={zones} /></span>}
       </div>
       {block.notes && <p className="block-notes">{block.notes}</p>}
-      <ul className="targets">
-        {targets.items.map((t) => (
-          <Target key={t.id} target={t} />
-        ))}
-      </ul>
+      <div className="places">
+        {groups.map((g) =>
+          g.place ? (
+            <Place key={g.key} place={g.place} targets={g.targets} />
+          ) : (
+            <TargetList key="none" targets={g.targets} />
+          ),
+        )}
+      </div>
     </section>
   );
+});
+
+function TargetList({ targets }: { targets: PlanTargets[] }) {
+  return (
+    <ul className="targets">
+      {targets.map((t) => (
+        <Target key={t.id} target={t} />
+      ))}
+    </ul>
+  );
+}
+
+/** One place in a bracket: open while any of its targets is open; once all are done it folds
+ *  to a single line that opens again on click. */
+const Place = observer(({ place, targets }: { place: GameRef; targets: PlanTargets[] }) => {
+  const doneCount = targets.filter(isDone).length;
+  const allDone = doneCount === targets.length;
+  // null follows the state (done folds); a click overrides it until the page reloads
+  const [unfolded, setUnfolded] = useState<boolean | null>(null);
+  const folded = allDone && unfolded !== true;
+  const toggle = () => { if (allDone) setUnfolded(folded); };
+
+  return (
+    <div className={`place ${allDone ? "done" : ""} ${folded ? "folded" : ""}`}>
+      <div
+        className="place-head"
+        role={allDone ? "button" : undefined}
+        tabIndex={allDone ? 0 : undefined}
+        aria-expanded={allDone ? !folded : undefined}
+        onClick={toggle}
+        onKeyDown={(e) => { if (allDone && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggle(); } }}
+      >
+        <span className="place-mark" aria-hidden="true" />
+        <span className="place-name"><GameRefLink value={place} /></span>
+        <PlaceLevels place={place} />
+        <span className="place-state tnum">
+          {allDone ? "— done" : `${doneCount} of ${targets.length} done`}
+        </span>
+        {allDone && <span className="place-fold" aria-hidden="true">{folded ? "▸" : "▾"}</span>}
+      </div>
+      {!folded && <TargetList targets={targets} />}
+    </div>
+  );
+});
+
+/** The place's level range as the game data has it (zone, dungeon) or its exploration level (area). */
+const PlaceLevels = observer(({ place }: { place: GameRef }) => {
+  if (place.zone_id != null) return <ZoneLevels id={place.zone_id} />;
+  if (place.lfg_dungeon_id != null) return <DungeonLevels id={place.lfg_dungeon_id} />;
+  if (place.area_id != null) return <AreaLevel id={place.area_id} />;
+  return null;
+});
+
+function Range({ min, max }: { min: number | null | undefined; max: number | null | undefined }) {
+  if (min == null && max == null) return null;
+  return <span className="place-levels tnum">{min == null || max == null || min === max ? `level ${min ?? max}` : `${min}–${max}`}</span>;
+}
+
+const ZoneLevels = observer(({ id }: { id: number }) => {
+  const db = useDb();
+  const ref = useMemo(() => db.zones.ref(String(id)), [db, id]);
+  const { value } = useRecord(ref);
+  return value ? <Range min={value.min_level} max={value.max_level} /> : null;
+});
+
+const DungeonLevels = observer(({ id }: { id: number }) => {
+  const db = useDb();
+  const ref = useMemo(() => db.dungeons.ref(String(id)), [db, id]);
+  const { value } = useRecord(ref);
+  return value ? <Range min={value.min_level} max={value.max_level} /> : null;
+});
+
+const AreaLevel = observer(({ id }: { id: number }) => {
+  const db = useDb();
+  const ref = useMemo(() => db.areas.ref(String(id)), [db, id]);
+  const { value } = useRecord(ref);
+  return value && (value.exploration_level ?? 0) > 0 ? <Range min={value.exploration_level} max={value.exploration_level} /> : null;
 });
 
 const KIND: Record<string, string> = {
@@ -228,16 +341,13 @@ const Target = observer(({ target: t }: { target: PlanTargets }) => {
   const who = useContext(WhoContext);
   const assigned = asKeys(t.characters);
   const everyone = [...who.keys()];
-  const owners = assigned.length > 0 ? assigned : everyone;
-  const done = asKeys(t.done_by);
-  const doneCount = owners.filter((k) => done.includes(k)).length;
-  const state = doneCount === 0 ? "" : doneCount === owners.length ? "done" : "part";
+  const done = isDone(t);
   const ref = asRef(t.ref);
   const forWho = t.for_character ? who.get(t.for_character)?.name : null;
 
   return (
-    <li className={`target ${state === "done" ? "done" : ""}`}>
-      <span className={`tick ${state}`} title={state === "part" ? `Done by ${done.map((k) => who.get(k)?.name ?? k).join(", ")}` : undefined} />
+    <li className={`target ${done ? "done" : ""}`}>
+      <span className={`tick ${done ? "done" : ""}`} />
       <div>
         <div className="target-title">{t.title}</div>
         <div className="target-meta">

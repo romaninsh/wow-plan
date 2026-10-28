@@ -8,11 +8,12 @@
 const BUILD = "1.60.1.70532";
 const now = new Date();
 
-// Edit codes of the sample plans (for tests; documented in mongo/README.md). Only the SHA-256
-// hex is stored, the same hash Vantage's hash_secret() makes.
+// Edit codes of the sample plans (for tests; documented in mongo/README.md): 4 characters, like
+// the ones create_plan makes with generate_password(4) (no 0 1 I O l). Only the SHA-256 hex is
+// stored, the same hash Vantage's hash_secret() makes.
 const crypto = require("crypto");
 const editHash = (code) => crypto.createHash("sha256").update(code).digest("hex");
-const EDIT_CODES = { k3Fq9xZ: "GrrDemoEdit2", p8Lm2Tw: "VinnieSolo34", Zt4n0Ra: "GrakEditMe56" };
+const EDIT_CODES = { k3Fq9xZ: "Grr4", p8Lm2Tw: "Vin2", Zt4n0Ra: "Grk9" };
 
 // game data references (Blizzard id + name snapshot)
 const item = (item_id, name, quality = 1) => ({ item_id: NumberInt(item_id), name, quality: NumberInt(quality) });
@@ -26,6 +27,12 @@ const SKINNING = skill(393, "Skinning"), LEATHERWORKING = skill(165, "Leatherwor
 const FIRST_AID = skill(129, "First Aid"), COOKING = skill(185, "Cooking"), FISHING = skill(356, "Fishing");
 const TIRISFAL = zone(85, "Tirisfal Glades"), SILVERPINE = zone(130, "Silverpine Forest");
 const UNDERCITY = zone(1497, "Undercity"), HILLSBRAD = zone(267, "Hillsbrad Foothills");
+const DUROTAR = zone(14, "Durotar"), BARRENS = zone(17, "The Barrens");
+const DEATHKNELL = area(154, "Deathknell"), BRILL = area(159, "Brill"), SEPULCHER = area(228, "The Sepulcher");
+const TARREN_MILL = area(272, "Tarren Mill"), RAZOR_HILL = area(362, "Razor Hill"), CROSSROADS = area(380, "The Crossroads");
+const RUINS = dungeon(3272, "Ruins of Lordaeron"), WAILING = dungeon(1, "Wailing Caverns");
+// A target's `place` is one of these (zone, area or dungeon id + name); targets with none are
+// done anywhere. Places are what the player wrote, never where the data says something drops.
 
 function character(plan_id, order, key, name, race, cls, primary, secondary, start, notes = null) {
   return {
@@ -42,15 +49,26 @@ function block(plan_id, n, min_level, max_level, title, zones, notes = null) {
   };
 }
 
+// place_key: the place as one flat value ("dungeon:3272", "zone:14", "area:159", "none"), which
+// pages filter on (a dotted filter on `place` matches nothing in Vantage's cache); the
+// actions (resolve_target) write it the same way
+function placeKey(p) {
+  if (!p) return "none";
+  if (p.lfg_dungeon_id !== undefined) return `dungeon:${p.lfg_dungeon_id}`;
+  if (p.zone_id !== undefined) return `zone:${p.zone_id}`;
+  return `area:${p.area_id}`;
+}
+
 // targets(plan_id, block_n, [...]) numbers them t<block><nn> in the order given
 function targets(plan_id, block_n, list) {
   return list.map((t, i) => {
     const doc = {
       _id: `${plan_id}.t${block_n}${String(i + 1).padStart(2, "0")}`,
       plan_id, block_id: `${plan_id}.b${block_n}`, order: NumberInt(i + 1),
-      characters: [], done_by: [], notes: null, ...t,
+      characters: [], done: false, done_at: null, place: null, notes: null, ...t,
     };
     for (const f of ["count", "level"]) if (doc[f] !== undefined) doc[f] = NumberInt(doc[f]);
+    doc.place_key = placeKey(doc.place);
     return doc;
   });
 }
@@ -79,55 +97,59 @@ const grr = {
   ],
   targets: [
     ...targets(GRR, 1, [
-      { kind: "note", title: "Lin meets Vinnie in Tirisfal" },
-      { kind: "reach_profession_level", title: "Tailoring 25", characters: ["vinnie"], ref: TAILORING, level: 25 },
-      { kind: "reach_profession_level", title: "Skinning 20", characters: ["lin"], ref: SKINNING, level: 20 },
+      { kind: "note", title: "Lin meets Vinnie in Tirisfal", place: TIRISFAL },
+      { kind: "reach_profession_level", title: "Tailoring 25", characters: ["vinnie"], ref: TAILORING, level: 25, place: DEATHKNELL },
+      { kind: "reach_profession_level", title: "Skinning 20", characters: ["lin"], ref: SKINNING, level: 20, place: DEATHKNELL },
       { kind: "craft_item", title: "Linen Bags for self", characters: ["vinnie"], ref: item(4238, "Linen Bag"), count: 2, purpose: "use", for_character: "vinnie" },
       { kind: "craft_item", title: "Light Armor Kits for the auction house", characters: ["lin"], ref: item(2304, "Light Armor Kit"), count: 5, purpose: "sell" },
     ]),
     ...targets(GRR, 2, [
-      { kind: "craft_item", title: "Linen Bags for Lin", characters: ["vinnie"], ref: item(4238, "Linen Bag"), count: 2, purpose: "give", for_character: "lin" },
-      { kind: "craft_item", title: "Camp Tent", characters: ["lin"], ref: item(279978, "Camp Tent"), count: 1, purpose: "use", notes: "Leatherworking 20, 5 Light Leather" },
-      { kind: "complete_quest", title: "Voidwalker quest at 10, Undercity", characters: ["vinnie"] },
+      { kind: "craft_item", title: "Linen Bags for Lin", characters: ["vinnie"], ref: item(4238, "Linen Bag"), count: 2, purpose: "give", for_character: "lin", place: BRILL },
+      { kind: "craft_item", title: "Camp Tent", characters: ["lin"], ref: item(279978, "Camp Tent"), count: 1, purpose: "use", notes: "Leatherworking 20, 5 Light Leather", place: BRILL },
+      { kind: "complete_quest", title: "Voidwalker quest at 10, Undercity", characters: ["vinnie"], place: UNDERCITY },
       { kind: "complete_quest", title: "Bear Form and Teleport: Moonglade quests at 10", characters: ["lin"] },
-      { kind: "reach_profession_level", title: "Herbalism 60", characters: ["vinnie"], ref: HERBALISM, level: 60 },
+      { kind: "reach_profession_level", title: "Herbalism 60", characters: ["vinnie"], ref: HERBALISM, level: 60, place: TIRISFAL },
       { kind: "reach_profession_level", title: "Tailoring 75", characters: ["vinnie"], ref: TAILORING, level: 75 },
       { kind: "reach_profession_level", title: "Leatherworking 60", characters: ["lin"], ref: LEATHERWORKING, level: 60 },
       { kind: "reach_level", title: "Reach level 10, train Journeyman ranks", level: 10 },
       { kind: "reach_level", title: "Reach level 12, move to Silverpine", level: 12 },
     ]),
     ...targets(GRR, 3, [
-      { kind: "travel_to_zone", title: "Move to The Sepulcher", ref: area(228, "The Sepulcher") },
-      { kind: "craft_item", title: "Red Linen Bags to replace the Linen Bags", characters: ["vinnie"], ref: item(5762, "Red Linen Bag"), count: 4, purpose: "use" },
-      { kind: "craft_item", title: "Linen Reagent Bag", characters: ["vinnie"], ref: item(253664, "Linen Reagent Bag"), count: 1, purpose: "sell" },
+      { kind: "travel_to_zone", title: "Move to The Sepulcher", ref: SEPULCHER, place: SEPULCHER },
+      { kind: "craft_item", title: "Red Linen Bags to replace the Linen Bags", characters: ["vinnie"], ref: item(5762, "Red Linen Bag"), count: 4, purpose: "use", place: SEPULCHER },
+      { kind: "craft_item", title: "Linen Reagent Bag", characters: ["vinnie"], ref: item(253664, "Linen Reagent Bag"), count: 1, purpose: "sell", place: SEPULCHER },
       { kind: "craft_item", title: "Minor Healing Potions at First Aid 55", characters: ["vinnie"], ref: item(118, "Minor Healing Potion"), count: 10, purpose: "use" },
-      { kind: "note", title: "Pick up Ruins of Lordaeron quests in Undercity" },
+      { kind: "note", title: "Pick up Ruins of Lordaeron quests in Undercity", place: UNDERCITY },
     ]),
     ...targets(GRR, 4, [
-      { kind: "run_dungeon", title: "Ruins of Lordaeron, twice (15-16 and 17-18)", ref: dungeon(3272, "Ruins of Lordaeron"), count: 2 },
-      { kind: "acquire_item", title: "Rotmender's Leggings", characters: ["vinnie"], ref: item(271207, "Rotmender's Leggings", 3), count: 1 },
-      { kind: "acquire_item", title: "Rotmender's Treads", characters: ["vinnie"], ref: item(271214, "Rotmender's Treads", 3), count: 1 },
-      { kind: "acquire_item", title: "Tuskwrap Belt", characters: ["vinnie"], ref: item(271210, "Tuskwrap Belt", 3), count: 1 },
-      { kind: "acquire_item", title: "Coldspire Staff", characters: ["vinnie"], ref: item(271215, "Coldspire Staff", 3), count: 1 },
-      { kind: "acquire_item", title: "Bloodied Chestwraps (tank set)", characters: ["lin"], ref: item(271212, "Bloodied Chestwraps", 3), count: 1 },
-      { kind: "acquire_item", title: "Witherbite Bracers (tank set)", characters: ["lin"], ref: item(271202, "Witherbite Bracers", 3), count: 1 },
-      { kind: "craft_item", title: "Light Leather Quivers for the auction house", characters: ["lin"], ref: item(7278, "Light Leather Quiver"), count: 5, purpose: "sell" },
+      // the player's own note that these drop in the Ruins; the data has no drop sources
+      { kind: "run_dungeon", title: "Ruins of Lordaeron, twice (15-16 and 17-18)", ref: RUINS, count: 2, place: RUINS },
+      { kind: "acquire_item", title: "Rotmender's Leggings", characters: ["vinnie"], ref: item(271207, "Rotmender's Leggings", 3), count: 1, place: RUINS },
+      { kind: "acquire_item", title: "Rotmender's Treads", characters: ["vinnie"], ref: item(271214, "Rotmender's Treads", 3), count: 1, place: RUINS },
+      { kind: "acquire_item", title: "Tuskwrap Belt", characters: ["vinnie"], ref: item(271210, "Tuskwrap Belt", 3), count: 1, place: RUINS },
+      { kind: "acquire_item", title: "Coldspire Staff", characters: ["vinnie"], ref: item(271215, "Coldspire Staff", 3), count: 1, place: RUINS },
+      { kind: "acquire_item", title: "Bloodied Chestwraps (tank set)", characters: ["lin"], ref: item(271212, "Bloodied Chestwraps", 3), count: 1, place: RUINS },
+      { kind: "acquire_item", title: "Witherbite Bracers (tank set)", characters: ["lin"], ref: item(271202, "Witherbite Bracers", 3), count: 1, place: RUINS },
+      { kind: "craft_item", title: "Light Leather Quivers for the auction house", characters: ["lin"], ref: item(7278, "Light Leather Quiver"), count: 5, purpose: "sell", place: UNDERCITY },
       { kind: "craft_item", title: "Lesser Healing Potions at First Aid 85", characters: ["vinnie"], ref: item(858, "Lesser Healing Potion"), count: 10, purpose: "use" },
     ]),
     ...targets(GRR, 5, [
-      { kind: "travel_to_zone", title: "Move to Hillsbrad at 18, Tarren Mill", ref: area(272, "Tarren Mill") },
+      { kind: "travel_to_zone", title: "Move to Hillsbrad at 18, Tarren Mill", ref: TARREN_MILL, place: TARREN_MILL },
       { kind: "reach_level", title: "Reach level 20, train Expert ranks", level: 20 },
-      { kind: "complete_quest", title: "Succubus quest at 20", characters: ["vinnie"] },
+      { kind: "complete_quest", title: "Succubus quest at 20", characters: ["vinnie"], place: UNDERCITY },
       { kind: "complete_quest", title: "Cat Form quest at 20", characters: ["lin"] },
-      { kind: "craft_item", title: "Woolen Bags and Woolen Reagent Bags", characters: ["vinnie"], ref: item(253667, "Woolen Reagent Bag"), count: 4, purpose: "sell" },
-      { kind: "reach_profession_level", title: "Skinning 140", characters: ["lin"], ref: SKINNING, level: 140 },
+      { kind: "craft_item", title: "Woolen Bags and Woolen Reagent Bags", characters: ["vinnie"], ref: item(253667, "Woolen Reagent Bag"), count: 4, purpose: "sell", place: TARREN_MILL },
+      { kind: "reach_profession_level", title: "Skinning 140", characters: ["lin"], ref: SKINNING, level: 140, place: HILLSBRAD },
       { kind: "reach_profession_level", title: "Leatherworking 140", characters: ["lin"], ref: LEATHERWORKING, level: 140 },
     ]),
   ],
 };
-// some progress, so "done" can be tested
-grr.targets.find((t) => t._id === `${GRR}.t101`).done_by = ["vinnie", "lin"];
-grr.targets.find((t) => t._id === `${GRR}.t104`).done_by = ["vinnie"];
+// some progress, so "done" can be tested: in block 1 the Tirisfal and Deathknell places are
+// done, the place-less group is half done. A to-do is done once for the whole plan, whoever it
+// is for (the page can't know who is looking).
+for (const n of ["t101", "t102", "t103", "t104"]) {
+  Object.assign(grr.targets.find((t) => t._id === `${GRR}.${n}`), { done: true, done_at: now });
+}
 
 // ── 2. A clone of House of Grr, renamed, Vinnie only, first two blocks ─────────────────────────
 const FORK = "p8Lm2Tw";
@@ -142,7 +164,7 @@ const fork = {
   targets: grr.targets
     .filter((t) => t.block_id.endsWith(".b1") || t.block_id.endsWith(".b2"))
     .filter((t) => t.characters.length === 0 || t.characters.includes("vinnie"))
-    .map((t) => ({ ...reId(t), done_by: [] })),
+    .map((t) => ({ ...reId(t), done: false, done_at: null })),
 };
 
 // ── 3. Solo Orc Hunter in Durotar: a hunter starts in leather and learns mail at 40 ──────────
@@ -152,27 +174,30 @@ const hunt = {
     edit_code_hash: editHash(EDIT_CODES[HUNT]), created_at: now, updated_at: now,
     description: "An orc hunter, solo, taking every side quest in Durotar and the Barrens." },
   characters: [
-    character(HUNT, 1, "grak", "Grak", [2, "Orc"], [3, "Hunter"], [SKINNING, LEATHERWORKING], [COOKING, FIRST_AID], zone(14, "Durotar")),
+    character(HUNT, 1, "grak", "Grak", [2, "Orc"], [3, "Hunter"], [SKINNING, LEATHERWORKING], [COOKING, FIRST_AID], DUROTAR),
   ],
   blocks: [
-    block(HUNT, 1, 1, 10, "Durotar", [zone(14, "Durotar")]),
-    block(HUNT, 2, 10, 20, "The Barrens", [zone(17, "The Barrens")]),
+    block(HUNT, 1, 1, 10, "Durotar", [DUROTAR]),
+    block(HUNT, 2, 10, 20, "The Barrens", [BARRENS]),
   ],
   targets: [
     ...targets(HUNT, 1, [
-      { kind: "reach_level", title: "Reach level 10 and tame a pet", level: 10 },
-      { kind: "craft_item", title: "Small Leather Ammo Pouch", ref: item(7279, "Small Leather Ammo Pouch"), count: 1, purpose: "use" },
+      { kind: "reach_level", title: "Reach level 10 and tame a pet", level: 10, place: DUROTAR },
+      { kind: "craft_item", title: "Small Leather Ammo Pouch", ref: item(7279, "Small Leather Ammo Pouch"), count: 1, purpose: "use", place: RAZOR_HILL },
     ]),
     ...targets(HUNT, 2, [
-      { kind: "travel_to_zone", title: "Cross into the Barrens", ref: zone(17, "The Barrens") },
-      { kind: "run_dungeon", title: "Wailing Caverns", ref: dungeon(1, "Wailing Caverns") },
-      { kind: "reach_profession_level", title: "Leatherworking 100", ref: LEATHERWORKING, level: 100 },
+      { kind: "travel_to_zone", title: "Cross into the Barrens", ref: BARRENS, place: BARRENS },
+      { kind: "run_dungeon", title: "Wailing Caverns", ref: WAILING, place: WAILING },
+      { kind: "reach_profession_level", title: "Leatherworking 100", ref: LEATHERWORKING, level: 100, place: CROSSROADS },
     ]),
   ],
 };
 
 // ── write ──────────────────────────────────────────────────────────────────────────────────
+// The sample plans: add new ones here. Only these ids are ever deleted and re-inserted; a
+// plan a user created is never touched. Each is marked `sample: true`.
 const samples = [grr, fork, hunt];
+for (const s of samples) s.plan.sample = true;
 const ids = samples.map((s) => s.plan._id);
 db.plans.deleteMany({ _id: { $in: ids } });
 for (const c of ["plan_characters", "plan_blocks", "plan_targets"]) db.getCollection(c).deleteMany({ plan_id: { $in: ids } });

@@ -1,0 +1,81 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Desktop dialog for a new item target (acquire or craft). Collects values only; the plan page
+# turns them into add_target args (build_target_args) and add_target checks everything.
+kind: form
+dialog:
+  title: "Add an item"
+  description: "Type part of the item's name, then pick it. It goes in this bracket unless you pick another."
+  confirm_label: Add item
+  size: lg
+form:
+  fields:
+    - { name: plan_id, type: string, label: Plan link, readonly: true }
+    - { name: item_search, type: string, label: Find item, placeholder: "e.g. Linen Bag", required: false }
+    - name: item
+      type: string
+      label: Item
+      widget: dropdown
+      option_label: name
+      options: |
+        let s = form["item_search"];
+        if s == () { table("item").where("item_id", 0) } else { table("item").search(s).limit(50) }
+    - { name: craft, type: bool, label: "I craft it myself", required: false, default: "false" }
+    - { name: count, type: int, label: How many, required: false, placeholder: "1" }
+    - { name: purpose, type: string, label: "What for", choices: [use, sell, give], required: false }
+    - name: character
+      type: string
+      label: "Who (blank = everyone)"
+      required: false
+      widget: dropdown
+      option_value: key
+      option_label: name
+      options: |
+        table("plan_character").where("plan_id", form["plan_id"])
+    - name: for_character
+      type: string
+      label: "Made for (crafting)"
+      required: false
+      widget: dropdown
+      option_value: key
+      option_label: name
+      options: |
+        table("plan_character").where("plan_id", form["plan_id"])
+    - name: block_id
+      type: string
+      label: "Another bracket (blank = this one)"
+      required: false
+      widget: dropdown
+      option_label: title
+      options: |
+        table("plan_block").where("plan_id", form["plan_id"])
+    - { name: place_search, type: string, label: Find place, placeholder: "e.g. Shadowfang", required: false }
+    - name: place_zone
+      type: string
+      label: "Place: zone"
+      required: false
+      widget: dropdown
+      option_label: name
+      options: |
+        let s = form["place_search"];
+        if s == () { table("zone").limit(200) } else { table("zone").search(s).limit(50) }
+    - name: place_area
+      type: string
+      label: "Place: town or area"
+      required: false
+      widget: dropdown
+      option_label: name
+      options: |
+        let s = form["place_search"];
+        if s == () { table("area").where("area_id", 0) } else { table("area").search(s).limit(50) }
+    - name: place_dungeon
+      type: string
+      label: "Place: dungeon"
+      required: false
+      widget: dropdown
+      option_label: name
+      options: |
+        let s = form["place_search"];
+        if s == () { table("dungeon").limit(100) } else { table("dungeon").search(s).limit(50) }
+    - { name: title, type: string, label: "Title (blank = the item's name)", required: false }
+    - { name: notes, type: string, label: Notes, multiline: true, required: false }

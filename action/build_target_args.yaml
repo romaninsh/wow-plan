@@ -1,0 +1,71 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Desktop helper for the plan page: turns the values of a target dialog (target_*_form) into
+# the args of add_target / update_target. It checks only what the dialog can get wrong (two
+# places picked at once); add_target and update_target check everything else. Writes nothing.
+# Not served by the API.
+#
+#   args: { form: <dialog values>, kind?: <target kind, for add>, plan_id?: <for add>,
+#           target_id?: <for update> }
+kind: script
+body: |
+  let f = args.form;
+  if type_of(f) != "map" { throw "Nothing to save"; }
+  let out = #{};
+  if args.plan_id != () { out.plan_id = args.plan_id; }
+  if args.target_id != () { out.target_id = args.target_id; }
+  if args.kind != () { out.kind = args.kind; }
+
+  fn num(v) { if type_of(v) == "string" { parse_int(v) } else { v } }
+
+  // where it is done: one zone, town/area or dungeon
+  let picked = [];
+  if f.place_zone != () { picked.push(#{ zone_id: num(f.place_zone) }); }
+  if f.place_area != () { picked.push(#{ area_id: num(f.place_area) }); }
+  if f.place_dungeon != () { picked.push(#{ lfg_dungeon_id: num(f.place_dungeon) }); }
+  if picked.len() > 1 { throw "Pick one place: a zone, a town or a dungeon, not several"; }
+  let place = if picked.len() == 1 { picked[0] } else { () };
+
+  // what it is about
+  if f.item != () { out.ref = #{ item_id: num(f.item) }; }
+  if f.quest != () { out.ref = #{ quest_id: num(f.quest) }; }
+  if f.skill != () { out.ref = #{ skill_line_id: num(f.skill) }; }
+  if args.kind == "travel_to_zone" || args.kind == "run_dungeon" {
+    // a trip or dungeon run is about the place itself
+    if place == () { throw "Pick the zone, town or dungeon"; }
+    out.kind = if f.place_dungeon != () { "run_dungeon" } else { "travel_to_zone" };
+    out.ref = place;
+  } else if place != () {
+    out.place = place;
+  }
+  if f.clear_place == true {
+    if place != () { throw "Pick a new place or tick No place, not both"; }
+    out.place = #{};
+  }
+
+  // who
+  if f.character != () { out.characters = [f.character]; }
+  if f.who != () {
+    let w = `${f.who}`;
+    w.trim();
+    if w == "" || w.to_lower() == "everyone" {
+      out.characters = [];
+    } else {
+      let names = [];
+      for part in w.split(",") { let p = part; p.trim(); if p != "" { names.push(p); } }
+      out.characters = names;
+    }
+  }
+
+  // plain fields
+  let t = f.title;
+  if t != () { t = `${t}`; t.trim(); if t != "" { out.title = t; } }
+  if f.count != () { out.count = f.count; }
+  if f.level != () { out.level = f.level; }
+  if f.purpose != () { out.purpose = `${f.purpose}`.to_lower(); }
+  if f.for_character != () { out.for_character = f.for_character; }
+  if f.notes != () { out.notes = f.notes; }
+  // the edit dialog opens with the notes filled in, so an empty field means "clear them"
+  if f.notes == () && args.target_id != () { out.notes = ""; }
+  if f.block_id != () { out.block_id = f.block_id; }
+  out

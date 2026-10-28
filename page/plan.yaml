@@ -1,0 +1,114 @@
+# yaml-language-server: $schema=./page-schema-1.json
+#
+# One plan at a glance: its characters and its level brackets as a list. The admin's one path
+# into a plan: Plans → this page → a bracket (page/todos.yaml: its places and to-dos) → a place;
+# Edit brackets (under the list) opens the bracket editor. Opened from Plans (Open plan, or
+# double-click a plan). Writes here: New edit key (rotate_edit_key) and Edit character
+# (update_character); the plan's name is edited on Plans.
+title: "${record.name}"
+record:
+  table: plan
+  id: "${args.id}"
+body:
+  - kind: row
+    children:
+      - kind: label
+        params: { text: "${record.name}", style: heading, icon: Map }
+      - kind: label
+        params: { text: "wow-plan.com/${record._id} · ${record.side} · build ${record.game_build}", style: muted }
+  - kind: label
+    when: 'record.description != ""'
+    params: { text: "${record.description}", style: muted }
+
+  # a new edit key replaces the old one: whoever has the old key can no longer edit
+  - kind: row
+    children:
+      - kind: button
+        name: new_key_button
+        params:
+          label: New edit key
+          icon: Key
+          # closing the confirm without an answer throws "dialog dropped" (FEEDBACK.md): a cancel
+          action: |
+            let go = false;
+            try { go = actions.confirm_new_edit_key(); } catch (e) { go = false; }
+            if go {
+              let res = ();
+              try {
+                res = actions.rotate_edit_key(#{ plan_id: args.id });
+              } catch (e) {
+                toast(actions.plain_error(#{ error: `${e}` }).message, "error");
+              }
+              if res != () { actions.show_edit_key(#{ edit_key: res.edit_key }); }
+            }
+
+  - kind: divider
+    label: Characters
+  - kind: grid
+    name: characters
+    height: 110
+    observe: { script: 'scenery("plan_character_row").where("plan_id", args.id)' }
+    params:
+      refresh_interval: 2
+      columns:
+        name: { label: Character, width: 160, pin: true }
+        race_name: { label: Race, width: 150 }
+        class_name: { label: Class, width: 100 }
+        primary_text: { label: Professions, width: 200 }
+        secondary_text: { label: Secondary skills, width: 200 }
+        start_name: { label: Starts at, width: 150 }
+        notes: { label: Notes, width: 320 }
+      row_actions:
+        - label: Edit character
+          icon: Pencil
+          triggers: { double_click: true }
+          action: |
+            let r = actions.character_edit_form(row);
+            let a = #{ plan_id: row.plan_id, character: row.key, name: r.name };
+            a.notes = if r.notes == () { "" } else { r.notes };
+            if r.change_professions == true {
+              let primary = [];
+              if r.primary_1 != () { primary.push(parse_int(r.primary_1)); }
+              if r.primary_2 != () { primary.push(parse_int(r.primary_2)); }
+              let ids = #{ "First Aid": 129, "Cooking": 185, "Fishing": 356 };
+              let secondary = [];
+              if r.secondary != () {
+                for s in r.secondary.split(",") { let n = s; n.trim(); if ids.contains(n) { secondary.push(ids[n]); } }
+              }
+              a.professions = #{ primary: primary, secondary: secondary };
+            }
+            if r.start_zone != () && r.start_area != () { throw "Pick one start place: a zone or a town, not both"; }
+            if r.start_zone != () { a.start = #{ zone_id: parse_int(r.start_zone) }; }
+            if r.start_area != () { a.start = #{ area_id: parse_int(r.start_area) }; }
+            try { actions.update_character(a); } catch (e) { throw actions.plain_error(#{ error: `${e}` }).message; }
+            notify(`${r.name} saved`);
+
+  - kind: divider
+    label: Level brackets
+  # One line per bracket (view plan_bracket_rows: to-do and place figures); a click opens the
+  # bracket: its places and its to-dos (page/todos.yaml). Brackets themselves (add, levels,
+  # remove) are edited on the Brackets page.
+  - kind: list
+    name: bracket_list
+    observe: { script: 'scenery("plan_bracket_row").where("plan_id", args.id).sort("order", "asc")' }
+    action: 'open("todos", #{ plan_id: row.plan_id, block_id: row._id, title: row.title, place: "" })'
+    item:
+      - kind: row
+        children:
+          - kind: label
+            params: { text: "${row.levels}", style: muted, icon: Layers }
+          - kind: label
+            params: { text: "${row.title}", style: heading }
+          - kind: label
+            params: { text: "${row.progress} · ${row.place_count} places", style: muted }
+          - kind: label
+            when: 'row.status == "done"'
+            params: { text: "done", icon: CircleCheck }
+  - kind: row
+    children:
+      - kind: button
+        name: brackets_button
+        params:
+          label: Edit brackets
+          icon: Layers
+          action: 'open("brackets", #{ plan_id: args.id });'

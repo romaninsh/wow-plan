@@ -1,0 +1,49 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Desktop dialog for a character-level target ("reach level 10"). The level picks the bracket.
+kind: form
+dialog:
+  title: "Add a character level"
+  confirm_label: Add
+form:
+  fields:
+    - { name: plan_id, type: string, label: Plan link, readonly: true }
+    - { name: level, type: int, label: Character level, placeholder: "1-60" }
+    - name: character
+      type: string
+      label: "Who (blank = everyone)"
+      required: false
+      widget: dropdown
+      option_value: key
+      option_label: name
+      options: |
+        table("plan_character").where("plan_id", form["plan_id"])
+    - name: block_id
+      type: string
+      label: "Another bracket (blank = this one)"
+      required: false
+      widget: dropdown
+      option_label: title
+      options: |
+        table("plan_block").where("plan_id", form["plan_id"])
+    - { name: place_search, type: string, label: Find place, required: false }
+    - name: place_zone
+      type: string
+      label: "Place: zone"
+      required: false
+      widget: dropdown
+      option_label: name
+      options: |
+        let s = form["place_search"];
+        if s == () { table("zone").limit(200) } else { table("zone").search(s).limit(50) }
+    - name: place_area
+      type: string
+      label: "Place: town or area"
+      required: false
+      widget: dropdown
+      option_label: name
+      options: |
+        let s = form["place_search"];
+        if s == () { table("area").where("area_id", 0) } else { table("area").search(s).limit(50) }
+    - { name: title, type: string, label: "Title (blank = Reach level n)", required: false }
+    - { name: notes, type: string, label: Notes, multiline: true, required: false }

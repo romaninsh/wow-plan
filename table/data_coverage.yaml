@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=./table-schema-1.json
+# How the build's data spreads over level brackets (dbt mart data_coverage, rebuilt with every
+# import): one row per bracket, a count per kind of data. Read-only.
+datasource: wow
+title: Data coverage by level
+table: data_coverage
+columns:
+  - { name: bracket_order, label: "#", type: int, flags: [id, hidden] }
+  - { name: bracket, label: Levels, type: string, flags: [title] }
+  - { name: items, label: Items, type: int }
+  - { name: quests, label: Quests, type: int }
+  - { name: zones, label: Zones, type: int }
+  - { name: dungeons, label: Dungeons, type: int }
+  - { name: areas, label: Areas, type: int }
+  - { name: recipes, label: Recipes, type: int }

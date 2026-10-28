@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=./table-schema-1.json
+# One place inside one bracket of a plan: MongoDB view `plan_place_groups` (mongo/views.js).
+# status is "done" once every target there is ticked by all its characters, else "open".
+datasource: plans
+title: Places in brackets
+table: plan_place_groups
+mongo: { view: true }
+columns:
+  - { name: _id, label: ID, type: string, flags: [id, hidden] }
+  - { name: plan_id, label: Plan, type: string, flags: [hidden] }
+  - { name: block_id, label: Bracket ID, type: string, flags: [hidden] }
+  - { name: block_order, label: Bracket order, type: int, flags: [hidden] }
+  - { name: block_title, label: Bracket, type: string }
+  - { name: block_levels, label: Levels, type: string }
+  - { name: place_key, label: Place key, type: string, flags: [hidden] }
+  - { name: place_kind, label: Kind, type: string, enum: [zone, dungeon, area, none] }
+  - { name: place_name, label: Place, type: string, flags: [title, searchable] }
+  - { name: status, label: Status, type: string, enum: [open, done] }
+  - { name: progress, label: Progress, type: string }
+  - { name: targets, label: Targets, type: int }
+  - { name: done_count, label: Done, type: int }
+  - { name: first_order, label: First target, type: int, flags: [hidden] }
+  - { name: sort_key, label: Sort, type: int, flags: [hidden] }
