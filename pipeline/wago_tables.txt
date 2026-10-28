@@ -36,6 +36,9 @@ SpellReagents
 SpellTotems
 SkillLineAbility
 SkillLine
+# enchants: what an enchant spell puts on the item (the tooltip line), and which slots it takes
+SpellItemEnchantment
+SpellEquippedItems
 
 # world
 AreaTable

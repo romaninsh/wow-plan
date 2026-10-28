@@ -27,6 +27,18 @@ description: >
   A new block_id puts the target last in that bracket. Returns { id, block_id, place,
   level_note }.
 rate_limit: { per_second: 1, burst: 20 }
+params:
+  target_id: { type: string }
+  ref: { type: object, required: false }
+  title: { type: string, required: false }
+  characters: { type: array, required: false }
+  count: { type: int, required: false }
+  level: { type: int, required: false }
+  purpose: { type: string, required: false }
+  for_character: { type: string, required: false }
+  notes: { type: string, required: false }
+  block_id: { type: string, required: false }
+  place: { type: object, required: false }
 dialog:
   title: Change target
 body: |

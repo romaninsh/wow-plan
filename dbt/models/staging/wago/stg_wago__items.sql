@@ -22,6 +22,10 @@ select
     nullif(s."ItemDelay", 0)            as weapon_speed_ms,
     s."DmgVariance"                     as damage_variance,
     s."Flags_1"                         as flags_1,
+    nullif(s."MinFactionID", 0)         as required_faction_id,
+    nullif(s."MinReputation", 0)        as required_standing,
+    nullif(s."RequiredPVPRank", 0)      as required_pvp_rank,
+    nullif(s."OppositeFactionItemID", 0) as opposite_faction_item_id,
     nullif(i."IconFileDataID", 0)       as icon_file_data_id,
     '{{ var("wago_build") }}'           as build
 from {{ source('wago', 'ItemSparse') }} as s

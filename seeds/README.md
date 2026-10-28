@@ -21,6 +21,7 @@ Rules:
 | `ref_zone_levels.csv` | zone level ranges where sub-area levels are wrong | per row (empty so far) |
 | `ref_dungeon_levels.csv` | dungeon level ranges | per row |
 | `ref_profession_ranks.csv` | trainer ranks: skill bounds, character level | per row |
+| `ref_reputation_standings.csv` | reputation standing → name (Hated to Exalted) | client constants |
 | `ref_creature_classifications.csv` | creature rank → name | client constants |
 | `ref_map_instance_types.csv` | Map.InstanceType → name | client constants |
 | `ref_spell_schools.csv` | school bit → name | client constants |

@@ -8,8 +8,23 @@
 # renumbered 1..n by (min_level, max_level), ids stay <plan_id>.b<n> with n one above the highest
 # in use. Returns #{ id, order, min_level, max_level }.
 #
-# Desktop only, not in api/wowplan.yaml (see add_target).
+# In api/wowplan.yaml too: a plan created on the web or by an agent starts with no brackets, and
+# every target needs one. The plans datasource's rule refuses it on a plan the session hasn't
+# unlocked.
 kind: script
+description: >
+  Add a level bracket to a plan; needs the plan unlocked in this session (unlock_plan). Every
+  target sits in a bracket and a new plan has none, so add the brackets first. Takes plan_id,
+  min_level and max_level (1-60), and title (default "Levels 10-15"). Brackets may share one
+  edge level (10-15 and 15-19) but not overlap more, and a one-level bracket can't touch
+  another. Returns { id, order, min_level, max_level }; pass id to add_target as block_id.
+rate_limit: { per_second: 1, burst: 20 }
+params:
+  plan_id: { type: string }
+  min_level: { type: int }
+  max_level: { type: int }
+  title: { type: string, required: false }
+  zones: { type: array, required: false }
 dialog:
   title: Add bracket
 body: |

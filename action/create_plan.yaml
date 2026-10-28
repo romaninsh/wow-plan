@@ -17,6 +17,9 @@ description: >
   key that unlocks it elsewhere, shown only this once. Rate-limited: five plans, then one
   every 20 seconds.
 rate_limit: { per_second: 0.05, burst: 5 }
+params:
+  name: { type: string }
+  characters: { type: array }
 dialog:
   title: Create plan
 body: |

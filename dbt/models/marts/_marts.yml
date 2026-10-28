@@ -144,6 +144,49 @@ models:
       - name: item_set_id
         data_tests:
           - relationships: { arguments: { to: ref('item_sets'), field: item_set_id } }
+      - name: faction_side
+        data_tests:
+          - accepted_values: { arguments: { values: [Alliance, Horde] } }
+      - name: required_faction_id
+        data_tests:
+          - relationships: { arguments: { to: ref('factions'), field: faction_id }, config: { severity: warn } }
+
+  - name: item_sources
+    description: >
+      Where an item comes from as far as client data says: crafted (recipes), quest reward or choice
+      (opendata quests, only those seen), reputation standing (a faction reward; faction NULL when the
+      build gives only the standing), PvP rank. No loot, vendor or world-drop rows: those are server-side.
+    config: { meta: { pg_primary_key: item_source_id, pg_indexes: [item_id, kind, source_id, zone_id] } }
+    columns:
+      - name: item_source_id
+        data_tests: [unique, not_null]
+      - name: kind
+        data_tests:
+          - not_null
+          - accepted_values: { arguments: { values: [crafted, quest_reward, quest_choice, reputation, pvp_rank] } }
+      - name: item_id
+        data_tests:
+          - not_null
+          - relationships: { arguments: { to: ref('items'), field: item_id } }
+
+  - name: enchants
+    description: >
+      Enchant spells a player can get (SpellEffect 53 permanent / 54 temporary, SpellItemEnchantment):
+      profession enchants and the items that apply one (scrolls, armor kits, stones, oils). effect_text is
+      the line the enchanted item shows; applies_to the slots (SpellEquippedItems); taught_by the formula;
+      item the applying item, whose required_level is the only level gate in client data.
+    config: { meta: { pg_primary_key: enchant_spell_id, pg_indexes: [name, enchant_id, skill_line_id, item_id, taught_by_item_id] } }
+    columns:
+      - name: enchant_spell_id
+        data_tests: [unique, not_null]
+      - name: name
+        data_tests: [not_null]
+      - name: kind
+        data_tests:
+          - accepted_values: { arguments: { values: [permanent, temporary] } }
+      - name: item_id
+        data_tests:
+          - relationships: { arguments: { to: ref('items'), field: item_id } }
 
   - name: item_stats
     description: One row per item and stat slot, with the budget inputs (value = round(budget_share x budget_points / 10000)).
@@ -216,7 +259,7 @@ models:
           - relationships: { arguments: { to: ref('items'), field: item_id } }
 
   - name: recipe_reagents
-    description: One row per recipe and reagent.
+    description: One row per recipe or profession enchant and reagent (recipe_spell_id is either's spell).
     config: { meta: { pg_primary_key: recipe_reagent_id, pg_indexes: [recipe_spell_id, item_id] } }
     columns:
       - name: recipe_reagent_id

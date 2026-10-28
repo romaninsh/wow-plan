@@ -75,6 +75,12 @@ seeds:
       - name: binding
         data_tests: [unique, not_null]
 
+  - name: ref_reputation_standings
+    description: Reputation standing (ItemSparse.MinReputation) to its name, Hated to Exalted. Client constants.
+    columns:
+      - name: standing
+        data_tests: [unique, not_null]
+
   - name: ref_creature_classifications
     description: Creature rank (normal, elite, rare, boss). Client constants.
     columns:

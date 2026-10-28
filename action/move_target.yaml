@@ -20,6 +20,10 @@ description: >
   its own bracket) and order (1 is first; default: last in a new bracket, else where it is).
   Returns { id, block_id, order, level_note }.
 rate_limit: { per_second: 1, burst: 20 }
+params:
+  target_id: { type: string }
+  block_id: { type: string, required: false }
+  order: { type: int, required: false }
 dialog:
   title: Move target
 body: |

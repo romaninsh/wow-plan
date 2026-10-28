@@ -34,6 +34,21 @@ description: >
   is never refused: it comes back as level_note, to tell the player. Returns
   { id, block_id, place, level_note }.
 rate_limit: { per_second: 1, burst: 20 }
+# Typed so an MCP client sends ref and place as objects and level as a number; without them it
+# stringified every arg and the body refused the ref. The body stays lenient for desktop calls.
+params:
+  plan_id: { type: string }
+  kind: { type: string }
+  ref: { type: object, required: false }
+  title: { type: string, required: false }
+  characters: { type: array, required: false }
+  count: { type: int, required: false }
+  level: { type: int, required: false }
+  purpose: { type: string, required: false }
+  for_character: { type: string, required: false }
+  notes: { type: string, required: false }
+  block_id: { type: string, required: false }
+  place: { type: object, required: false }
 dialog:
   title: Add target
 body: |

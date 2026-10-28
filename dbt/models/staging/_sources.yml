@@ -39,6 +39,8 @@ sources:
       - name: SpellTotems
       - name: SkillLineAbility
       - name: SkillLine
+      - name: SpellItemEnchantment
+      - name: SpellEquippedItems
       - name: AreaTable
       - name: Map
       - name: UiMap

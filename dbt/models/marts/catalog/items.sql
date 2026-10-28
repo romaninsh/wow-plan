@@ -32,6 +32,16 @@ usable as (
       -- a mask covering every class is no restriction
       and (m.allowable_class_mask & (select bit_or(class_mask) from classes)) <> (select bit_or(class_mask) from classes)
     group by m.item_id
+),
+
+-- race mask bits per side, for items whose race restriction leaves only one side's races
+side_masks as (
+    select
+        bit_or(r.race_mask) filter (where c.side = 'Alliance') as alliance_mask,
+        bit_or(r.race_mask) filter (where c.side = 'Horde')    as horde_mask
+    from {{ ref('races') }} as r
+    join (select distinct race_id, side from {{ ref('class_race_combos') }}) as c using (race_id)
+    where r.race_mask is not null
 )
 
 select
@@ -66,6 +76,27 @@ select
     u.usable_by_classes,
     cm.allowable_class_mask,
     cm.allowable_race_mask,
+    -- one side only: the client's Horde / Alliance item flags (ItemSparse.Flags_1 bits 0 and 1),
+    -- or a race restriction that leaves only that side's races. NULL: both sides can use it.
+    case
+        when i.flags_1 & 1 <> 0 then 'Horde'
+        when i.flags_1 & 2 <> 0 then 'Alliance'
+        when cm.allowable_race_mask not in (0, -1)
+             and cm.allowable_race_mask & sm.horde_mask = 0
+             and cm.allowable_race_mask & sm.alliance_mask <> 0 then 'Alliance'
+        when cm.allowable_race_mask not in (0, -1)
+             and cm.allowable_race_mask & sm.alliance_mask = 0
+             and cm.allowable_race_mask & sm.horde_mask <> 0 then 'Horde'
+    end                             as faction_side,
+    i.opposite_faction_item_id,
+    -- a reputation the item asks for (usually a faction quartermaster's reward). Some builds give
+    -- the standing but no faction (the Warsong Gulch rewards in 1.60.1): faction_id stays NULL.
+    i.required_faction_id,
+    f.name                          as required_faction_name,
+    i.required_standing,
+    rs.name                         as required_standing_name,
+    -- the client's PvP rank number as stored (ItemSparse.RequiredPVPRank); not mapped to titles
+    i.required_pvp_rank,
     i.required_skill_line_id,
     sk.name                         as required_skill_name,
     i.required_skill_rank,
@@ -99,3 +130,6 @@ left join {{ ref('stg_wago__skill_lines') }} as sk on sk.skill_line_id = i.requi
 left join {{ ref('stg_wago__item_sets') }} as s on s.item_set_id = i.item_set_id
 left join {{ ref('stg_wago__item_class_masks') }} as cm on cm.item_id = i.item_id
 left join usable as u on u.item_id = i.item_id
+left join {{ ref('stg_wago__factions') }} as f on f.faction_id = i.required_faction_id
+left join {{ ref('ref_reputation_standings') }} as rs on rs.standing = i.required_standing
+cross join side_masks as sm

@@ -97,6 +97,11 @@ Three layers:
   seen; opendata's loot, vendor and spawn data arrives after launch (2026-11-04).
 - Zones have no level field in Forever data: ranges come from sub-area exploration levels, with
   seed overrides. Dungeon ranges are seeded (`seeds/ref_dungeon_levels.csv`).
+- `item_sources` says where an item comes from as far as client data goes: crafted, quest reward /
+  choice (opendata quests only), reputation standing (some builds give the standing but not the
+  faction, e.g. the Warsong Gulch rewards), PvP rank. `enchants` lists enchant spells with their
+  tooltip line, slots, formula and applying item. `items.faction_side` is set only for the few
+  items the client marks Alliance- or Horde-only.
 - Recipe `skill_required` is the client minimum; the trainer's requirement is server-side.
 - Stat values follow opendata's budget formula; spot-check against the game.
 
@@ -105,3 +110,8 @@ Three layers:
 - Spot-check item stats against in-game tooltips; fill dungeon and zone level seeds.
 - Design the guide documents in MongoDB, then the guide pages in Vantage (a separate menu section).
 - API (`api/`) and MCP access; the React client.
+- Plan page (2026-10-28, user): the edit buttons are too big. Clicking a to-do's text should be
+  enough to edit it, with no separate button.
+- Agent-built plans follow `agent-skills/wow-plan-planner`: few to-dos and minimal detail, notes
+  only for what the player can't see or find by playing. Exploring and talking to other players
+  is the point of Forever, so a plan is goals, not a walkthrough.
