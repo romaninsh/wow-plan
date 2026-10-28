@@ -39,8 +39,8 @@ const TRIGGER: Record<string, string> = { use: "Use", equip: "Equip", chance_on_
 
 const ItemTooltip = observer(({ item, itemId }: { item: Items; itemId: number }) => {
   const db = useDb();
-  // A filter with the numeric id, not item.stats / item.spells: following those relations sends
-  // the id as text, which Postgres refuses against a bigint column (noted in FEEDBACK.md).
+  // A filter with the numeric id. item.stats / item.spells work too since vantage-server 1.8.1,
+  // which binds the parent's typed id against the bigint column.
   const stats = useCollection(db.item_stats.where({ item_id: itemId }));
   const spells = useCollection(db.item_spells.where({ item_id: itemId }));
   return (

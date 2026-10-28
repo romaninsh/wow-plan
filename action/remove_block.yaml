@@ -3,8 +3,16 @@
 # Removes an empty level bracket. Args: block_id. A bracket with targets is refused (move or
 # remove them first). The plan's other brackets are renumbered 1..n. Returns #{ id }.
 #
-# Desktop only, not in api/wowplan.yaml (see add_target).
+# In api/wowplan.yaml too, beside add_block; the plans datasource's rule refuses it on a plan the
+# session hasn't unlocked. update_block stays desktop only: it calls resolve_target (VAN-546).
 kind: script
+description: >
+  Remove an empty level bracket from a plan; needs the plan unlocked (unlock_plan). Takes
+  block_id (from list_plan_blocks or add_block). A bracket that still has targets is refused:
+  move or remove them first. Returns { id }.
+rate_limit: { per_second: 1, burst: 20 }
+params:
+  block_id: { type: string }
 dialog:
   title: Remove bracket
 body: |

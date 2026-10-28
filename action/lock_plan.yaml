@@ -1,18 +1,15 @@
 # yaml-language-server: $schema=./action-schema-1.json
 #
-# PARKED: not in api/wowplan.yaml until Vantage has anonymous sessions (agents/BRIEF.md
-# "Sessions and unlock").
-#
-# Locks a plan again for this session (the padlock's Lock): removes it from the session's
-# `unlocked`. Args: plan_id. Returns #{ unlocked: false }.
+# The padlock's Lock: takes the plan off this session's `plans` list. Returns #{ unlocked: false }.
 kind: script
+description: >
+  Lock a plan again in this session: its changes are refused until it is unlocked with its edit
+  key. Other sessions that unlocked it stay unlocked. Takes plan_id. Returns { unlocked: false }.
+params:
+  plan_id: { type: string }
 dialog:
   title: Lock plan
 body: |
   let plan_id = if args.plan_id == () { "" } else { `${args.plan_id}` };
-  let list = session.unlocked ?? "";
-  if plan_id != "" && list.contains(`,${plan_id},`) {
-    list.replace(`,${plan_id},`, ",");
-    session.set("unlocked", if list == "," { "" } else { list });
-  }
+  if plan_id != "" { session.remove("plans", plan_id); }
   #{ unlocked: false }

@@ -23,14 +23,17 @@ Three layers:
    being removed. Built with AI help; we focus on presentation. Each guide has a short random link
    (7 characters); opening it shows the guide and offers to clone it. Example material: the user's
    "House of Grr" planner (Vinnie, Undead Warlock; Lin, Skyborne Druid), checked for levels 1-20.
-3. **API and web app (started).** `api/wowplan.yaml` serves guides and the game data they reference,
-   read-only; the only writes are server actions (`create_plan`, `check_edit_code`). `web/wowplan/`
-   is the React app: an intro (slogan, plan name, one character plus an optional friend, recently
-   opened plans) and a read-only plan page (characters, level blocks, targets) with hover lookups
-   of items, zones, areas, dungeons and skills. House rule: logic lives in the backend; the page
-   keeps only what belongs to the browser (edit-code cookies, the recent list). Each plan has a
-   share link (`/p/<id>`) and an edit link (`/p/<id>#edit=<code>`); the code goes into a cookie
-   and the server says whether it edits. MCP access for AI agents comes later.
+3. **API, web app and MCP (started).** `api/wowplan.yaml` serves guides and the game data they
+   reference. Records are read-only; plans change only through server actions (`create_plan`,
+   `unlock_plan`, the target actions, `tick_todo`, `set_target_notes`), refused for a plan the
+   session hasn't unlocked. The same API is an MCP server (`/mcp` on the API's own port) for
+   AI agents.
+   `web/wowplan/` is the React app: an intro (slogan, plan name, one character plus an optional
+   friend, recently opened plans) and a plan page (characters, level blocks, targets) with
+   hover lookups of items, zones, areas, dungeons and skills, and a padlock: unlocked with the
+   edit key, it ticks to-dos and edits notes. House rule: logic lives in the backend; the page
+   keeps only what belongs to the browser (the session token, the recent list). Each plan has
+   a share link (`/p/<id>`); an old edit link (`/p/<id>#edit=<code>`) unlocks once.
 
 ## Editing plans (decided 2026-10-28)
 
@@ -42,7 +45,7 @@ Three layers:
   stored. Brute force is the API's rate limit's job, not ours.
 - **Unlock:** a visual unlock on the plan page (lock button, type the key); it changes the
   session so the editing actions open up for that plan, remembered on the device. Replaces
-  the `#edit=` link. Needs session support in the 1.10 API: build after it lands.
+  the `#edit=` link. Built (see "Sessions and unlock").
 - **Targets belong to a level bracket (block) and a place** (zone, dungeon or area). The page
   groups a bracket's targets by place; a place stays open until all its targets are ticked
   (SFK stays on the list while something there is left to farm). More associations later.
@@ -51,7 +54,7 @@ Three layers:
   bracket named, a target goes into the bracket covering its level; a named bracket is always
   accepted, and a level mismatch only comes back as a note for the agent to mention. Nothing is
   refused for level; the MCP agent building the plan decides.
-- **Sessions and unlock (decided 2026-10-28; waits for Vantage, see FEEDBACK.md):**
+- **Sessions and unlock (decided 2026-10-28; built except the Sessions page):**
   - Two kinds of visitor: one with a plan's id (reads that plan only: no listing, a plan's
     characters, brackets and to-dos reachable only from the plan) and one who also has its
     edit key.
@@ -65,12 +68,21 @@ Three layers:
   - One write rule on the server refuses edits to plans not in the session's list, for the
     web page and MCP agents alike. A new edit key also revokes that plan from every session.
   - A desktop **Sessions** page lists who is connected (which page/plan, last access) and can
-    **grant** edit on a plan to a session (support) as well as revoke it or disconnect.
-  - Rate limit on unlocking (4-character keys).
-  - Until Vantage has anonymous sessions the web app stays read-only; the action files
-    unlock_plan, lock_plan, plan_access and tick_todo are kept for then, unlisted from the API.
+    **grant** edit on a plan to a session (support) as well as revoke it or disconnect. Not
+    built: waits for VAN-540.
+  - Rate limits: unlocking five tries then one per 5 s, per session and per address (a new
+    session per guess doesn't help); new plans five then one per 20 s; each edit action 20
+    then one a second.
+  - Built 2026-10-28 (branch `sessions-and-mcp`, vantage-server 1.10): `application.yaml`
+    `session:`, the `plan_id` rule in `datasource/plans.yaml`, `api/wowplan.yaml` (plans by id,
+    their parts only `via: plans`, every record read-only, the target actions, MCP at `/mcp`
+    on the API's port, an API-wide `rate_limit` on tool calls and invokes),
+    the padlock on the plan page; checked by `tests/sessions_and_mcp.mjs`. add_target,
+    update_target and move_target carry a copy of resolve_target's checks: an API action
+    can't call another script action yet (VAN-546). Sessions are in memory: a server restart
+    (or a scale-down to zero) locks every plan again.
 - **Order:** actions and Guides pages in the Vantage desktop first (full access there), then
-  the API/MCP and the web unlock once 1.10 is out.
+  the API/MCP and the web unlock once vantage-server 1.10 is out.
 
 ## Data notes
 
@@ -85,6 +97,11 @@ Three layers:
   seen; opendata's loot, vendor and spawn data arrives after launch (2026-11-04).
 - Zones have no level field in Forever data: ranges come from sub-area exploration levels, with
   seed overrides. Dungeon ranges are seeded (`seeds/ref_dungeon_levels.csv`).
+- `item_sources` says where an item comes from as far as client data goes: crafted, quest reward /
+  choice (opendata quests only), reputation standing (some builds give the standing but not the
+  faction, e.g. the Warsong Gulch rewards), PvP rank. `enchants` lists enchant spells with their
+  tooltip line, slots, formula and applying item. `items.faction_side` is set only for the few
+  items the client marks Alliance- or Horde-only.
 - Recipe `skill_required` is the client minimum; the trainer's requirement is server-side.
 - Stat values follow opendata's budget formula; spot-check against the game.
 
@@ -93,3 +110,8 @@ Three layers:
 - Spot-check item stats against in-game tooltips; fill dungeon and zone level seeds.
 - Design the guide documents in MongoDB, then the guide pages in Vantage (a separate menu section).
 - API (`api/`) and MCP access; the React client.
+- Plan page (2026-10-28, user): the edit buttons are too big. Clicking a to-do's text should be
+  enough to edit it, with no separate button.
+- Agent-built plans follow `agent-skills/wow-plan-planner`: few to-dos and minimal detail, notes
+  only for what the player can't see or find by playing. Exploring and talking to other players
+  is the point of Forever, so a plan is goals, not a walkthrough.

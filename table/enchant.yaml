@@ -1,0 +1,37 @@
+# yaml-language-server: $schema=./table-schema-1.json
+# Enchants a player can get: profession enchants and items that apply one (scrolls, armor kits,
+# stones, oils). The applying item's required level is the only level gate in client data.
+datasource: wow
+title: Enchants
+table: enchants
+columns:
+  - { name: enchant_spell_id, label: ID, type: int, flags: [id, searchable] }
+  - { name: name, label: Enchant, type: string, flags: [title, searchable] }
+  - { name: effect_text, label: Effect, type: string, flags: [searchable] }
+  - { name: kind, label: Kind, type: string, enum: [permanent, temporary] }
+  - { name: applies_to, label: Applies to, type: string, flags: [searchable] }
+  - name: skill_line_id
+    label: Profession ID
+    type: int
+    references: { table: skill_line, kind: has_one, name: profession }
+  - { name: profession_name, label: Profession, type: string }
+  - { name: skill_required, label: Min skill, type: int }
+  - { name: skill_green, label: Green, type: int }
+  - { name: skill_gray, label: Gray, type: int }
+  - { name: reagent_count, label: Reagents, type: int }
+  - name: taught_by_item_id
+    label: Formula ID
+    type: int
+    references: { table: item, kind: has_one, name: taught_by }
+  - { name: taught_by_item_name, label: Formula, type: string }
+  - name: item_id
+    label: Applied by ID
+    type: int
+    references: { table: item, kind: has_one, name: applied_by }
+  - { name: item_name, label: Applied by, type: string, flags: [searchable] }
+  - { name: item_required_level, label: Use level, type: int }
+  - { name: duration_s, label: Duration (s), type: int }
+  - { name: charges, label: Charges, type: int }
+  - { name: description, label: Description, type: string }
+references:
+  reagents: { table: recipe_reagent, kind: has_many, foreign_key: recipe_spell_id }

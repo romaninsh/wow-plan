@@ -6,8 +6,9 @@ region `europe-west2`. The desktop app and its pages stay on the machine.
 
 Under the `prod` profile the API reads game data from Cloud SQL (`wow-plan-pg`, database `wow`,
 schema `wow`, as `wow_reader`) and guides from MongoDB Atlas (database `wowplan`). Auth is
-`none`: every entity is read-only and the only writes are `create_plan` and `check_edit_code`,
-which check their own input.
+`session` with anonymous sessions (`application.yaml`): every visitor gets an in-memory session;
+every entity is read-only, and plans change only through the API's actions, which the plans
+datasource's rule refuses for a plan the session hasn't unlocked with its edit key.
 
 The cloud resources (Cloud SQL, Artifact Registry repo `wow-plan`, the two secrets, the
 `wow-plan-run` service account and the `wow-plan` Cloud Run service) come from Terraform:
@@ -44,7 +45,7 @@ docker run -d --name wow-plan-check --platform linux/amd64 -p 127.0.0.1:8093:808
   -e 'SECRET_PLANS_URL=mongodb://host.docker.internal:<mongo port>/wowplan?directConnection=true' \
   wow-plan:local
 curl -s http://127.0.0.1:8093/v1/ready                 # {"ready":true}
-curl -s http://127.0.0.1:8093/v1/schema                # 13 tables, actions check_edit_code + create_plan
+curl -s http://127.0.0.1:8093/v1/schema                # 13 tables, actions create_plan, unlock_plan, add_target …
 curl -s http://127.0.0.1:8093/ | grep '<title>'        # wow-plan.com
 docker logs wow-plan-check 2>&1 | grep '"started"'     # "profile":"prod"
 node .agents/skills/vantage-api/scripts/smoke.mjs http://127.0.0.1:8093
@@ -73,10 +74,18 @@ gcloud run deploy wow-plan --project inlaid-agility-461020-e4 --region europe-we
   --add-cloudsql-instances inlaid-agility-461020-e4:europe-west2:wow-plan-pg \
   --set-env-vars VANTAGE_PROFILE=prod \
   --set-secrets SECRET_WOW_URL=wow-plan-wow-url:latest,SECRET_PLANS_URL=wow-plan-plans-url:latest \
-  --allow-unauthenticated --timeout 3600 --min-instances 0 --max-instances 1 \
+  --allow-unauthenticated --timeout 3600 --min-instances 1 --max-instances 1 \
   --concurrency 1000 --cpu 1 --memory 512Mi --cpu-boost
 ```
 
+- `--min-instances 1`: sessions, and with them every unlock, live in the instance's memory.
+  At `0` Cloud Run scales an idle service down and every browser and agent finds its plans
+  locked again (the page shows the padlock closed; the key unlocks again). One idle instance
+  costs little with CPU throttled; `0` is fine if losing unlocks after a quiet spell is.
+- `trust_forwarded: true` in `api/wowplan.yaml` is right for Cloud Run reached directly: the
+  per-address limits (unlock, create_plan, new sessions) key on the caller's address from
+  `X-Forwarded-For`. Behind a Google HTTP(S) load balancer set it to `2`. Locally there is
+  no header and the socket's peer counts.
 - CPU is throttled outside requests (Cloud Run's default; an open WebSocket counts as a
   request), so it bills only while someone is connected. Don't add `--no-cpu-throttling`.
 - `--timeout 3600`: a WebSocket is one request; the default 300 s drops every client each
@@ -88,6 +97,28 @@ gcloud run deploy wow-plan --project inlaid-agility-461020-e4 --region europe-we
   `postgres://wow_reader:<pw>@localhost/wow?host=/cloudsql/inlaid-agility-461020-e4:europe-west2:wow-plan-pg&options=-c%20search_path%3Dwow`
 - For a new version, build with the next tag, run it locally, push and deploy with the new
   `--image`; the other flags stay.
+
+## MCP for AI agents
+
+`api/wowplan.yaml` has `mcp: { mount: main }`: the same API as an MCP server (`/mcp`,
+Streamable HTTP) on the API's own port, beside the page and `/v1/ws`. So the one `wow-plan`
+service above serves agents too; nothing more to deploy:
+
+```sh
+claude mcp add --transport http wowplan "$(gcloud run services describe wow-plan \
+  --project inlaid-agility-461020-e4 --region europe-west2 --format='value(status.url)')/mcp"
+```
+
+- One process serves the browsers and the agents, so they share sessions and rate limits: a
+  New edit key (`rotate_edit_key`) from the page locks out an agent that had unlocked the plan
+  at its next call, and a key rotated by an agent locks out the browsers.
+- Locally too: `vantage-server --api wowplan` serves MCP at `http://127.0.0.1:8090/mcp` (the
+  API's port); Vantage's Services row shows the URL. There is no second port to pick
+  (`--mcp-port` / `VANTAGE_MCP_PORT` is ignored, with a warning).
+- The alternative, MCP on a port of its own (`mcp: { port: 4390 }`) run as a second Cloud Run
+  service of the image, is two processes: a rotated key would revoke sessions only in the
+  service that ran it, the others keeping the plan until they end (idle 1 h), and each service
+  would keep its own rate limits. Not worth it here.
 
 ## Atlas must let Cloud Run in
 

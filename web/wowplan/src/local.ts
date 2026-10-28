@@ -1,41 +1,34 @@
-// The only state the page keeps itself, because it belongs to this browser, not to a plan:
-// edit codes (cookies, so a code someone sent you works on this laptop from then on) and the
-// list of recently opened plans. Whether a code really edits a plan is the server's answer
-// (check_edit_code); names and everything else are read live from the API.
+// The only state the page keeps itself, because it belongs to this browser, not to a plan: the
+// list of recently opened plans. Whether this browser may edit a plan is its session's, on the
+// server (unlock_plan, plan_access; the session token is in localStorage, main.tsx); names and
+// everything else are read live from the API.
 
 const COOKIE_PREFIX = "wp_edit_";
 const RECENT_KEY = "wowplan.recent";
 const RECENT_MAX = 12;
 
-export function getEditCode(planId: string): string | null {
+/** An edit key this browser kept from before the unlock (an `#edit=` link, or its cookie),
+ *  taken once so the page can unlock with it: /p/<id>#edit=<code> */
+export function takeOldEditCode(planId: string): string | null {
+  const m = /(?:^|[#&])edit=([^&]+)/.exec(window.location.hash);
+  if (m?.[1]) {
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+    return decodeURIComponent(m[1]);
+  }
   const name = COOKIE_PREFIX + planId + "=";
   for (const part of document.cookie.split("; ")) {
-    if (part.startsWith(name)) return decodeURIComponent(part.slice(name.length));
+    if (part.startsWith(name)) {
+      document.cookie = `${COOKIE_PREFIX}${planId}=; path=/; max-age=0; SameSite=Lax`;
+      return decodeURIComponent(part.slice(name.length));
+    }
   }
   return null;
-}
-
-export function setEditCode(planId: string, code: string): void {
-  const year = 60 * 60 * 24 * 365;
-  document.cookie = `${COOKIE_PREFIX}${planId}=${encodeURIComponent(code)}; path=/; max-age=${year}; SameSite=Lax`;
-}
-
-export function forgetEditCode(planId: string): void {
-  document.cookie = `${COOKIE_PREFIX}${planId}=; path=/; max-age=0; SameSite=Lax`;
-}
-
-/** An edit link carries the code after `#`, so it never reaches a server log: /p/<id>#edit=<code> */
-export function takeEditCodeFromHash(planId: string): void {
-  const m = /(?:^|[#&])edit=([^&]+)/.exec(window.location.hash);
-  if (!m?.[1]) return;
-  setEditCode(planId, decodeURIComponent(m[1]));
-  history.replaceState(null, "", window.location.pathname + window.location.search);
 }
 
 export interface RecentPlan {
   id: string;
   openedAt: string;
-  /** the server's last answer to check_edit_code for this browser's code */
+  /** the server's last answer to plan_access for this browser's session */
   editable: boolean;
 }
 

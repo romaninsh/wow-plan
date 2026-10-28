@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { observer, useCollection, useRecord, useRun } from "@vantage-ui/client/react";
 import { useDb } from "../db";
-import { recentPlans, rememberPlan, setEditCode } from "../local";
+import { recentPlans, rememberPlan } from "../local";
 
 interface CharacterDraft {
   name: string;
@@ -52,9 +52,9 @@ const NewPlanForm = observer(() => {
   const result = create.result as { id?: string; edit_code?: string } | undefined;
   useEffect(() => {
     if (create.status === "done" && result?.id && result.edit_code) {
-      setEditCode(result.id, result.edit_code);
+      // the server unlocked the new plan in this session; the key is shown once, on the plan page
       rememberPlan(result.id, true);
-      navigate(`/p/${result.id}`);
+      navigate(`/p/${result.id}`, { state: { editKey: result.edit_code } });
     }
   }, [create.status, result, navigate]);
 
@@ -162,7 +162,7 @@ const RecentRow = observer(({ id, editable }: { id: string; editable: boolean })
     <Link to={`/p/${id}`}>
       <span className="recent-name">{value?.name ?? id}</span>
       <span className="muted">
-        {editable ? "you can edit" : "view only"} · <span className="mono">{id}</span>
+        {editable ? "unlocked on this device last time" : "view only"} · <span className="mono">{id}</span>
       </span>
     </Link>
   );

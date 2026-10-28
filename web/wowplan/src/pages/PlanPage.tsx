@@ -1,9 +1,9 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router";
-import { observer, useCollection, useRecord, useRun } from "@vantage-ui/client/react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import { Link, useLocation, useNavigate, useParams } from "react-router";
+import { observer, useCollection, useRecord } from "@vantage-ui/client/react";
 import { useDb } from "../db";
 import type { PlanBlocks, PlanCharacters, PlanTargets } from "../vantage.gen";
-import { getEditCode, rememberPlan, takeEditCodeFromHash } from "../local";
+import { rememberPlan, takeOldEditCode } from "../local";
 import { asKeys, asProfessions, asRef, asRefs, type GameRef } from "../shapes";
 import { GameRefLink } from "../components/GameRef";
 
@@ -11,13 +11,25 @@ import { GameRefLink } from "../components/GameRef";
 interface Who { name: string; cls: string }
 const WhoContext = createContext<Map<string, Who>>(new Map());
 
+/** Whether this session may edit the plan (the server's plan_access); edit controls show only then. */
+interface Access { unlocked: boolean; recheck: () => void }
+const AccessContext = createContext<Access>({ unlocked: false, recheck: () => {} });
+
 /** CSS class for a class's colour (styles.css: .cls-warlock …) */
 const clsOf = (className: string | null) => `cls-${(className ?? "").toLowerCase().replace(/[^a-z]/g, "")}`;
 
+type Db = ReturnType<typeof useDb>;
+type Outcome = { ok: true; value: unknown } | { ok: false; error: { message: string } };
+
+/** Runs one of the API's actions and waits for its outcome. The generated run types carry no
+ *  args for script actions, hence the cast. */
+function act(db: Db, action: keyof Db["run"], args: Record<string, unknown>): Promise<Outcome> {
+  const run = db.run[action] as unknown as { start(a: unknown): { done: Promise<Outcome> } };
+  return run.start(args).done;
+}
+
 export function PlanPage() {
   const { id = "" } = useParams();
-  // an edit link (/p/<id>#edit=<code>) stores its code in a cookie before anything renders
-  useState(() => takeEditCodeFromHash(id));
   return <Plan id={id} />;
 }
 
@@ -27,6 +39,28 @@ const Plan = observer(({ id }: { id: string }) => {
   const { value: plan, status } = useRecord(ref);
   const characters = useCollection(db.plan_characters.where({ plan_id: id }));
   const blocks = useCollection(db.plan_blocks.where({ plan_id: id }));
+  const targets = useCollection(db.plan_targets.where({ plan_id: id }));
+  // a plan made a moment ago: its key, for the AI prompt. Read on the first render, before
+  // Share takes it out of the history entry.
+  const location = useLocation();
+  const [newKey] = useState(() => (location.state as { editKey?: string } | null)?.editKey);
+
+  // the padlock: whether this session unlocked the plan, as the server says
+  const [unlocked, setUnlocked] = useState(false);
+  const recheck = useCallback(() => {
+    void act(db, "plan_access", { plan_id: id }).then((r) => {
+      const open = r.ok && (r.value as { unlocked?: boolean }).unlocked === true;
+      setUnlocked(open);
+      rememberPlan(id, open);
+    });
+  }, [db, id]);
+  useEffect(() => {
+    // an edit key kept from before the unlock (an old `#edit=` link or its cookie) unlocks once
+    const old = takeOldEditCode(id);
+    if (old) void act(db, "unlock_plan", { plan_id: id, key: old }).then(recheck);
+    else recheck();
+  }, [db, id, recheck]);
+  const access = useMemo(() => ({ unlocked, recheck }), [unlocked, recheck]);
 
   const who = useMemo(() => {
     const m = new Map<string, Who>();
@@ -45,6 +79,7 @@ const Plan = observer(({ id }: { id: string }) => {
   if (!plan) return <p className="notice">Opening plan…</p>;
 
   return (
+    <AccessContext.Provider value={access}>
     <WhoContext.Provider value={who}>
       <div className="wrap">
         <TopBar />
@@ -66,16 +101,15 @@ const Plan = observer(({ id }: { id: string }) => {
           ))}
         </section>
 
+        {targets.loadState !== "loading" && targets.items.length === 0 && (
+          <QuestPrompt id={id} editKey={newKey} characters={characters.items} />
+        )}
         {blocks.items.map((b) => (
           <Block key={b.id} block={b} />
         ))}
-        {blocks.loadState !== "loading" && blocks.items.length === 0 && (
-          <section className="block">
-            <p className="empty-page">This page of the plan is still blank. Plans can't be edited in the web app yet.</p>
-          </section>
-        )}
       </div>
     </WhoContext.Provider>
+    </AccessContext.Provider>
   );
 });
 
@@ -88,45 +122,110 @@ function TopBar() {
   );
 }
 
-/** Share link for everyone; the edit link only when this browser's code edits the plan (the server decides). */
-const Share = observer(({ id }: { id: string }) => {
+/** Share link for everyone, and the padlock: unlock with the plan's edit key, lock again. The
+ *  server keeps the unlock in this browser's session and refuses edits to a locked plan. */
+function Share({ id }: { id: string }) {
   const db = useDb();
-  const check = useRun(db.run.check_edit_code);
-  const code = getEditCode(id);
+  const { unlocked, recheck } = useContext(AccessContext);
+  // a plan made a moment ago on the intro screen: its key, shown this once. Taken out of the
+  // history entry at once, so a reload or Back doesn't show it again.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [newKey] = useState(() => (location.state as { editKey?: string } | null)?.editKey);
   useEffect(() => {
-    if (code) check.start({ plan_id: id, code } as Parameters<typeof check.start>[0]);
-    else rememberPlan(id, false);
+    if (newKey) navigate(location.pathname, { replace: true, state: null });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, code]);
-  const result = check.result as { editable?: boolean } | undefined;
-  const editable = check.status === "done" && result?.editable === true;
-  useEffect(() => {
-    if (check.status === "done") rememberPlan(id, editable);
-  }, [check.status, editable, id]);
+  }, []);
+  const [typing, setTyping] = useState(false);
+  const [key, setKey] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const run = async (action: "unlock_plan" | "lock_plan", args: Record<string, unknown>) => {
+    setBusy(true);
+    setError(null);
+    const r = await act(db, action, { plan_id: id, ...args });
+    setBusy(false);
+    if (!r.ok) setError(r.error.message);
+    else { setTyping(false); setKey(""); }
+    recheck();
+  };
 
   const origin = window.location.origin;
   return (
     <div className="panel share">
       <span className="label">Share</span>
       <CopyLine text={`${origin}/p/${id}`} />
-      {editable && code && (
+      {unlocked && newKey && (
         <>
-          <span className="label">Edit link: anyone with it can change the plan</span>
-          <CopyLine text={`${origin}/p/${id}#edit=${code}`} />
+          <span className="label">Edit key: it unlocks the plan on another device. Copy it now, it isn't shown again</span>
+          <CopyLine text={newKey} />
         </>
       )}
-      <span className={`share-note ${editable ? "editor" : ""}`}>
-        {editable ? "You can edit this plan on this device." : "View only."}
-      </span>
+      {typing && !unlocked ? (
+        <form className="row" onSubmit={(e) => { e.preventDefault(); void run("unlock_plan", { key }); }}>
+          <input className="input grow mono" value={key} maxLength={20} placeholder="Edit key" autoFocus aria-label="Edit key"
+            onChange={(e) => setKey(e.target.value)} />
+          <button type="submit" className="btn primary" disabled={busy || key.trim() === ""}>Unlock</button>
+          <button type="button" className="btn subtle" onClick={() => { setTyping(false); setError(null); }}>Cancel</button>
+        </form>
+      ) : (
+        <span className="row">
+          <span className={`share-note grow ${unlocked ? "editor" : ""}`}>
+            {unlocked ? "Unlocked: you can edit this plan on this device." : "Locked: view only."}
+          </span>
+          {unlocked ? (
+            <button type="button" className="btn subtle" disabled={busy} onClick={() => void run("lock_plan", {})}>Lock</button>
+          ) : (
+            <button type="button" className="btn subtle" onClick={() => setTyping(true)}>Unlock</button>
+          )}
+        </span>
+      )}
+      {error && <span className="error" role="alert">{error}</span>}
     </div>
   );
-});
+}
 
-function CopyLine({ text }: { text: string }) {
+/** A plan with no goals yet: a quest-giver's card asking the player to let their AI assistant
+ *  fill it in over wow-plan's MCP server (`/mcp` on this same host). */
+function QuestPrompt({ id, editKey, characters }: { id: string; editKey?: string; characters: readonly PlanCharacters[] }) {
+  const origin = window.location.origin;
+  const who = characters.map((c) => `${c.name}, a ${c.race_name} ${c.class_name}`).join(" and ");
+  const ask = `Fill my wow-plan ${origin}/p/${id} with goals for levelling ${who || "my character"}. `
+    + `Edit key: ${editKey ?? "<your edit key>"}.`;
+  return (
+    <section className="panel quest">
+      <span className="quest-mark" aria-hidden="true">!</span>
+      <div className="quest-body">
+        <h2 className="quest-title">A plan without goals</h2>
+        <p className="quest-text">
+          Let your AI assistant fill it in. Connect wow-plan to it as an MCP server, then ask it to plan
+          your way: it looks the items, zones and dungeons up in the game data and adds them here.
+        </p>
+        <ol className="quest-steps">
+          <li>
+            <span className="label">MCP server</span>
+            <CopyLine text={`${origin}/mcp`} />
+          </li>
+          <li>
+            <span className="label">In Claude Code</span>
+            <CopyLine text={`claude mcp add --transport http wow-plan ${origin}/mcp`} />
+          </li>
+          <li>
+            <span className="label">Then ask</span>
+            <CopyLine text={ask} wrap />
+          </li>
+        </ol>
+      </div>
+    </section>
+  );
+}
+
+function CopyLine({ text, wrap = false }: { text: string; wrap?: boolean }) {
   const [copied, setCopied] = useState(false);
   return (
     <span className="row">
-      <code className="grow mono" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{text}</code>
+      <code className="grow mono" style={wrap ? { whiteSpace: "normal" } : { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{text}</code>
       <button type="button" className="btn subtle" onClick={() => {
         void navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
       }}>{copied ? "Copied" : "Copy"}</button>
@@ -222,7 +321,8 @@ function groupByPlace(targets: readonly PlanTargets[]): PlaceGroup[] {
 
 const Block = observer(({ block }: { block: PlanBlocks }) => {
   const db = useDb();
-  const targets = useCollection(db.plan_targets.where({ block_id: block.id }));
+  // to-dos are served only under their plan (`via: plans`), so the plan narrows first
+  const targets = useCollection(db.plan_targets.where({ plan_id: block.plan_id ?? "", block_id: block.id }));
   const groups = groupByPlace(targets.items);
   const zones = asRefs(block.zones);
   return (
@@ -337,27 +437,75 @@ const KIND: Record<string, string> = {
 };
 const PURPOSE: Record<string, string> = { sell: "for the auction house", use: "to use", give: "to give" };
 
+/** Props that make text open an editor on click, Enter or Space, with no button of its own. */
+function editable(open: () => void, className = "") {
+  return {
+    className: `${className} editable`.trim(),
+    role: "button",
+    tabIndex: 0,
+    title: "Click to edit the notes",
+    onClick: open,
+    onKeyDown: (e: KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } },
+  };
+}
+
 const Target = observer(({ target: t }: { target: PlanTargets }) => {
+  const db = useDb();
   const who = useContext(WhoContext);
+  const { unlocked, recheck } = useContext(AccessContext);
   const assigned = asKeys(t.characters);
   const everyone = [...who.keys()];
   const done = isDone(t);
   const ref = asRef(t.ref);
   const forWho = t.for_character ? who.get(t.for_character)?.name : null;
+  const [notes, setNotes] = useState<string | null>(null); // null: not editing
+  const [error, setError] = useState<string | null>(null);
+
+  // a refusal (the plan was locked elsewhere, a new key) shows here and re-reads the padlock
+  const refused = (message: string) => { setError(message); recheck(); };
+  const tick = async () => {
+    setError(null);
+    const r = await act(db, "tick_todo", { target_id: t.id, done: !done });
+    if (!r.ok) refused(r.error.message);
+  };
+  const saveNotes = async () => {
+    setError(null);
+    const r = await act(db, "set_target_notes", { target_id: t.id, notes: notes ?? "" });
+    if (r.ok) setNotes(null);
+    else refused(r.error.message);
+  };
 
   return (
     <li className={`target ${done ? "done" : ""}`}>
-      <span className={`tick ${done ? "done" : ""}`} />
+      {unlocked ? (
+        <button type="button" className={`tick ${done ? "done" : ""}`} aria-label={done ? "Open again" : "Done"}
+          aria-pressed={done} onClick={() => void tick()} />
+      ) : (
+        <span className={`tick ${done ? "done" : ""}`} />
+      )}
       <div>
-        <div className="target-title">{t.title}</div>
+        {/* unlocked: a click on the notes edits them, and on the title of a to-do without notes
+            adds them; no button */}
+        <div {...(unlocked && notes === null && !t.notes ? editable(() => setNotes(""), "target-title") : { className: "target-title" })}>{t.title}</div>
         <div className="target-meta">
           <span className="kind">{KIND[t.kind ?? ""] ?? t.kind}</span>
           {ref && <GameRefLink value={ref} />}
           {t.count != null && t.count > 1 && <span className="tnum">×{t.count}</span>}
           {t.level != null && <span className="tnum">to {t.level}</span>}
           {t.purpose && <span>{t.purpose === "give" && forWho ? `for ${forWho}` : PURPOSE[t.purpose]}</span>}
-          {t.notes && <span>{t.notes}</span>}
+          {notes === null && t.notes && (
+            <span {...(unlocked ? editable(() => setNotes(t.notes ?? "")) : {})}>{t.notes}</span>
+          )}
         </div>
+        {notes !== null && (
+          <form className="row" onSubmit={(e) => { e.preventDefault(); void saveNotes(); }}>
+            <input className="input grow" value={notes} maxLength={1000} autoFocus aria-label="Notes"
+              onChange={(e) => setNotes(e.target.value)} />
+            <button type="submit" className="btn primary">Save</button>
+            <button type="button" className="btn subtle" onClick={() => setNotes(null)}>Cancel</button>
+          </form>
+        )}
+        {error && <div className="error" role="alert">{error}</div>}
       </div>
       <div className="badges">
         {assigned.length === 0 && everyone.length > 1 ? (

@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=./table-schema-1.json
+# Where an item comes from, as far as client data says. No loot, vendor or world-drop rows:
+# those are server-side.
+datasource: wow
+title: Item sources
+table: item_sources
+columns:
+  - { name: item_source_id, label: ID, type: string, flags: [id, hidden] }
+  - name: item_id
+    label: Item ID
+    type: int
+    references: { table: item, kind: has_one, name: item }
+  - { name: item_name, label: Item, type: string, flags: [title, searchable] }
+  - { name: kind, label: Source, type: string, enum: [crafted, quest_reward, quest_choice, reputation, pvp_rank] }
+  - { name: source_id, label: Source ID, type: int }
+  - { name: source_name, label: From, type: string, flags: [searchable] }
+  - { name: detail, label: Detail, type: string }
+  - name: recipe_spell_id
+    label: Recipe ID
+    type: int
+    references: { table: recipe, kind: has_one, name: recipe }
+  - name: quest_id
+    label: Quest ID
+    type: int
+    references: { table: quest, kind: has_one, name: quest }
+  - name: faction_id
+    label: Faction ID
+    type: int
+    references: { table: faction, kind: has_one, name: faction }
+  - name: zone_id
+    label: Zone ID
+    type: int
+    references: { table: zone, kind: has_one, name: zone }
+  - { name: zone_name, label: Zone, type: string }

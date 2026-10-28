@@ -1,0 +1,74 @@
+# yaml-language-server: $schema=./action-schema-1.json
+#
+# Name search over the game data, for MCP agents: the API's list tools filter by exact values
+# only, and an API entity with `columns` refuses a text search (FEEDBACK.md). Reads Postgres
+# reference data only, never plans. Matches the table's searchable columns, sorted by name:
+# it names things, never ranks them (agents/BRIEF.md, Spirit). Items narrow by slot, required
+# level and quality too, so an agent can see every Neck item a level 19 wears without knowing
+# names. Returns #{ rows, more }.
+kind: script
+description: >
+  Find World of Warcraft: Forever game records in this client build's data. Takes kind (items,
+  quests, zones, areas, dungeons, skill_lines, recipes, enchants) and text, part of a name in
+  any case (two characters or more). For items, text may be left out when slot (as slot_name
+  reads: Neck, Finger, Wrist, Back, Trinket, One-Hand, Ranged, …), max_required_level or quality
+  (0 poor … 4 epic) narrow the search, e.g. every Neck item a level 19 can wear. Returns
+  { rows, more }: up to 25 rows sorted by name, each with its id field (item_id, quest_id,
+  zone_id, area_id, lfg_dungeon_id, skill_line_id, recipe_spell_id, enchant_spell_id), name
+  and a few facts; more is true when there are others, and offset pages on. Pass the ids to
+  add_target or update_target as ref ({ item_id: 6324 }) or place ({ lfg_dungeon_id: 7 });
+  get_items, get_zones, get_areas, get_dungeons and get_skill_lines read a full record, and
+  list_item_sources { item_id } says what the data knows of where an item comes from (crafted,
+  quest reward, reputation, PvP rank; not creature drops or vendors).
+params:
+  kind: { type: string }
+  text: { type: string, required: false }
+  slot: { type: string, required: false }
+  max_required_level: { type: int, required: false }
+  quality: { type: int, required: false }
+  offset: { type: int, required: false }
+dialog:
+  title: Find game data
+body: |
+  let tables = #{
+    items: ["item", ["item_id", "name", "quality_name", "item_level", "required_level", "slot_name", "item_class_name", "item_subclass_name", "faction_side"]],
+    quests: ["quest", ["quest_id", "name", "quest_level", "min_level", "zone_name", "category_name"]],
+    zones: ["zone", ["zone_id", "name", "kind", "min_level", "max_level"]],
+    areas: ["area", ["area_id", "name", "zone_name", "exploration_level"]],
+    dungeons: ["dungeon", ["lfg_dungeon_id", "name", "kind", "min_level", "max_level", "max_players"]],
+    skill_lines: ["skill_line", ["skill_line_id", "name", "category"]],
+    recipes: ["recipe", ["recipe_spell_id", "name", "profession_name", "skill_required", "creates_item_id", "creates_item_name"]],
+    enchants: ["enchant", ["enchant_spell_id", "name", "effect_text", "applies_to", "kind", "item_id", "item_name", "item_required_level", "profession_name", "skill_required"]],
+  };
+  let kind = if args.kind == () { "" } else { `${args.kind}` };
+  if !(kind in tables) { fail("kind is one of items, quests, zones, areas, dungeons, skill_lines, recipes, enchants"); }
+  let text = if args.text == () { "" } else { `${args.text}` };
+  text.trim();
+  let narrowed = kind == "items" && (args.slot != () || args.max_required_level != () || args.quality != ());
+  if text.len() < 2 && !(narrowed && text.len() == 0) {
+    fail("Give at least two characters of the name, or for items a slot, max_required_level or quality");
+  }
+  if kind != "items" && (args.slot != () || args.max_required_level != () || args.quality != ()) {
+    fail("slot, max_required_level and quality narrow items only");
+  }
+  let offset = if args.offset == () { 0 } else { args.offset.to_int() };
+  if offset < 0 || offset > 500 { fail("offset goes from 0 to 500; narrow the search instead"); }
+  let spec = tables[kind];
+  let q = table(spec[0]);
+  if text.len() > 0 { q = q.where("name", "like", text); }
+  if args.slot != () { q = q.where("slot_name", `${args.slot}`); }
+  if args.max_required_level != () { q = q.where("required_level", "<=", args.max_required_level.to_int()); }
+  if args.quality != () { q = q.where("quality", args.quality.to_int()); }
+  // Tables have no offset verb: read offset + 26 rows and skip the first `offset`.
+  let found = q.sort("name").limit(offset + 26).list();
+  let rows = [];
+  let i = 0;
+  for r in found {
+    i += 1;
+    if i <= offset { continue; }
+    if rows.len() == 25 { break; }
+    let row = #{};
+    for c in spec[1] { if r[c] != () { row[c] = r[c]; } }
+    rows.push(row);
+  }
+  #{ rows: rows, more: found.len() > offset + 25 }

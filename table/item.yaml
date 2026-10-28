@@ -97,6 +97,16 @@ columns:
   - { name: spell_damage_vs_undead, label: "Spell Damage vs Undead", type: int }
   - { name: spell_damage_vs_beast, label: "Spell Damage vs Beasts", type: int }
   - { name: usable_by_classes, label: Classes, type: string }
+  - { name: faction_side, label: Faction only, type: string, enum: [Alliance, Horde] }
+  - { name: opposite_faction_item_id, label: Other faction's item, type: int }
+  - name: required_faction_id
+    label: Reputation ID
+    type: int
+    references: { table: faction, kind: has_one, name: required_faction }
+  - { name: required_faction_name, label: Reputation, type: string }
+  - { name: required_standing, label: Standing ID, type: int }
+  - { name: required_standing_name, label: Standing, type: string }
+  - { name: required_pvp_rank, label: PvP rank, type: int }
   - { name: required_skill_name, label: Required skill, type: string }
   - { name: required_skill_rank, label: Required skill rank, type: int }
   - name: item_set_id
@@ -117,3 +127,6 @@ references:
   used_in: { table: recipe_reagent, kind: has_many, foreign_key: item_id }
   teaches: { table: recipe, kind: has_many, foreign_key: taught_by_item_id }
   quests: { table: quest_item, kind: has_many, foreign_key: item_id }
+  sources: { table: item_source, kind: has_many, foreign_key: item_id }
+  applies_enchants: { table: enchant, kind: has_many, foreign_key: item_id }
+  teaches_enchants: { table: enchant, kind: has_many, foreign_key: taught_by_item_id }

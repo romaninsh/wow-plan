@@ -6,3 +6,24 @@ type: mongo
 description: wow-plan guides (MongoDB, database wowplan)
 url: ${secret.plans_url}
 database: wowplan
+# Anyone with a plan's link reads it; only a session that unlocked the plan with its edit key
+# (session.plans, unlock_plan) changes its characters, brackets and targets, through a record
+# write or an action alike. A table without plan_id isn't checked: the plan itself is
+# read-only in the API, and the actions that change it check the session themselves
+# (rotate_edit_key). The desktop's full access skips this script.
+invariants:
+  plan_id:
+    script: |
+      // no ": " in a message: vantage-server shows a REST/MCP caller such a text as a bare 500
+      let locked = "This plan is locked; unlock it with its edit key first";
+      if app.name == "wowplan" {
+        table.before_insert(|record| if !session.plans.contains(record.plan_id) { throw locked });
+        // both where the row was and where it goes: a target can't move into a locked plan
+        table.before_update(|record, stored| if !session.plans.contains(stored.plan_id) || (record.plan_id != () && !session.plans.contains(record.plan_id)) { throw locked });
+        table.before_delete(|id, row| if !session.plans.contains(row.plan_id) { throw locked });
+      } else {
+        // an API this rule doesn't name changes no plan
+        table.before_insert(|record| throw locked);
+        table.before_update(|record| throw locked);
+        table.before_delete(|id| throw locked);
+      }
