@@ -169,6 +169,11 @@ button, input, select { font: inherit; color: inherit; }
 .char dt { font-family: var(--title); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold-2); padding-top: 3px; }
 .char dd { margin: 0; }
 
+.offline {
+  margin: 0; padding: 10px 16px; border: 1px solid #8a2a12; border-radius: 2px;
+  background: rgba(120, 30, 10, 0.35); color: #ffcfb8; font-family: var(--title); letter-spacing: .04em;
+}
+
 /* ── empty plan: a quest-giver's card ───────────────────────────────────────── */
 .quest {
   display: flex; gap: 22px; align-items: flex-start; padding: 26px 30px;
