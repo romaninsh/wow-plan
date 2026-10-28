@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router";
-import { observer, useCollection, useRecord } from "@vantage-ui/client/react";
+import { observer, useCollection, useConnection, useRecord } from "@vantage-ui/client/react";
 import { useDb } from "../db";
 import type { PlanBlocks, PlanCharacters, PlanTargets } from "../vantage.gen";
 import { rememberPlan, takeOldEditCode } from "../local";
@@ -60,7 +60,16 @@ const Plan = observer(({ id }: { id: string }) => {
     if (old) void act(db, "unlock_plan", { plan_id: id, key: old }).then(recheck);
     else recheck();
   }, [db, id, recheck]);
-  const access = useMemo(() => ({ unlocked, recheck }), [unlocked, recheck]);
+  // Edits wait for the socket, so with it down nothing is editable. A reconnect may land in a
+  // new session (the server restarted, or the session timed out), so ask again once it's back.
+  const { status: connection } = useConnection();
+  const online = connection === "open";
+  const [wasOnline, setWasOnline] = useState(online);
+  useEffect(() => {
+    if (online && !wasOnline) recheck();
+    setWasOnline(online);
+  }, [online, wasOnline, recheck]);
+  const access = useMemo(() => ({ unlocked: unlocked && online, recheck }), [unlocked, online, recheck]);
 
   const who = useMemo(() => {
     const m = new Map<string, Who>();
@@ -83,6 +92,11 @@ const Plan = observer(({ id }: { id: string }) => {
     <WhoContext.Provider value={who}>
       <div className="wrap">
         <TopBar />
+        {!online && (
+          <p className="offline" role="status">
+            Lost the connection to wow-plan; reconnecting… Changes wait until it's back.
+          </p>
+        )}
         <header className="plan-head row">
           <div className="grow">
             <p className="label">
