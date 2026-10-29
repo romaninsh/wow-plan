@@ -197,6 +197,9 @@ button, input, select { font: inherit; color: inherit; }
 .quest-steps { margin: 0; padding-left: 22px; display: grid; gap: 12px; color: var(--gold-2); }
 .quest-steps li { display: grid; gap: 4px; }
 .quest-steps li::marker { font-family: var(--title); font-weight: 700; }
+.quest-platforms { margin: 0 0 16px; }
+.quest-note { color: var(--text); font-size: 15px; }
+.quest-download { justify-self: start; text-decoration: none; }
 @media (max-width: 560px) { .quest { flex-direction: column; } }
 
 /* ── level blocks: quest-log parchment ──────────────────────────────────────── */

@@ -200,36 +200,74 @@ function Share({ id }: { id: string }) {
   );
 }
 
+/** What a player does on one AI platform to let it fill a plan: connect wow-plan's MCP server,
+ *  optionally add the planner skill, then ask. More platforms go in PLATFORMS. */
+interface Platform {
+  key: string;
+  name: string;
+  steps: (s: { mcp: string; skillZip: string; skillMd: string; ask: string }) => { label: string; text?: string; body?: string; wrap?: boolean; link?: string }[];
+}
+const PLATFORMS: Platform[] = [
+  {
+    key: "claude-ai",
+    name: "Claude.ai",
+    steps: ({ mcp, skillZip, ask }) => [
+      { label: "Add the connector", body: "Settings → Connectors → Add custom connector. Name it wow-plan, with this URL; no sign-in.", text: mcp },
+      { label: "Optional: the planner skill", body: "It keeps the plan short and leaves the exploring to you. Download it, then Settings → Capabilities → Skills → Upload.", link: skillZip },
+      { label: "Then, in a chat with wow-plan switched on, ask", text: ask, wrap: true },
+    ],
+  },
+  {
+    key: "claude-code",
+    name: "Claude Code",
+    steps: ({ mcp, skillMd, ask }) => [
+      { label: "Add the server", text: `claude mcp add --transport http wow-plan ${mcp}` },
+      { label: "Optional: the planner skill", text: `curl -fsSL --create-dirs -o ~/.claude/skills/wow-plan-planner/SKILL.md ${skillMd}`, wrap: true },
+      { label: "Then ask", text: ask, wrap: true },
+    ],
+  },
+];
+
 /** A plan with no goals yet: a quest-giver's card asking the player to let their AI assistant
- *  fill it in over wow-plan's MCP server (`/mcp` on this same host). */
+ *  fill it in over wow-plan's MCP server (`/mcp` on this same host). First the platform, then
+ *  that platform's steps. */
 function QuestPrompt({ id, editKey, characters }: { id: string; editKey?: string; characters: readonly PlanCharacters[] }) {
+  const [platform, setPlatform] = useState<Platform | null>(null);
   const origin = window.location.origin;
   const who = characters.map((c) => `${c.name}, a ${c.race_name} ${c.class_name}`).join(" and ");
   const ask = `Fill my wow-plan ${origin}/p/${id} with goals for levelling ${who || "my character"}. `
     + `Edit key: ${editKey ?? "<your edit key>"}.`;
+  const skill = `${origin}/agent-skills/wow-plan-planner`;
+  const steps = platform?.steps({ mcp: `${origin}/mcp`, skillZip: `${skill}.zip`, skillMd: `${skill}/SKILL.md`, ask });
   return (
     <section className="panel quest">
       <span className="quest-mark" aria-hidden="true">!</span>
       <div className="quest-body">
         <h2 className="quest-title">A plan without goals</h2>
         <p className="quest-text">
-          Let your AI assistant fill it in. Connect wow-plan to it as an MCP server, then ask it to plan
-          your way: it looks the items, zones and dungeons up in the game data and adds them here.
+          Let your AI assistant fill it in: it looks the items, zones and dungeons up in the game
+          data and adds them here. Which one do you use?
         </p>
-        <ol className="quest-steps">
-          <li>
-            <span className="label">MCP server</span>
-            <CopyLine text={`${origin}/mcp`} />
-          </li>
-          <li>
-            <span className="label">In Claude Code</span>
-            <CopyLine text={`claude mcp add --transport http wow-plan ${origin}/mcp`} />
-          </li>
-          <li>
-            <span className="label">Then ask</span>
-            <CopyLine text={ask} wrap />
-          </li>
-        </ol>
+        <div className="row quest-platforms" role="radiogroup" aria-label="AI assistant">
+          {PLATFORMS.map((p) => (
+            <button key={p.key} type="button" role="radio" aria-checked={platform?.key === p.key}
+              className={`btn ${platform?.key === p.key ? "primary" : "subtle"}`} onClick={() => setPlatform(p)}>
+              {p.name}
+            </button>
+          ))}
+        </div>
+        {steps && (
+          <ol className="quest-steps">
+            {steps.map((s) => (
+              <li key={s.label}>
+                <span className="label">{s.label}</span>
+                {s.body && <span className="quest-note">{s.body}</span>}
+                {s.text && <CopyLine text={s.text} wrap={s.wrap} />}
+                {s.link && <a className="btn subtle quest-download" href={s.link} download>Download wow-plan-planner.zip</a>}
+              </li>
+            ))}
+          </ol>
+        )}
       </div>
     </section>
   );
