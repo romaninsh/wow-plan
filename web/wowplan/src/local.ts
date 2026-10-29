@@ -52,9 +52,10 @@ function editKeys(): Record<string, string> {
   }
 }
 
-/** The edit key this browser used for a plan (made here, or unlocked with it), kept only while
- *  the plan is unlocked here: the empty-plan card puts it in the request for an AI assistant.
- *  Locking, or the server saying the plan is locked (a new key, a restart), forgets it. */
+/** The edit key this browser used for a plan (made here, or unlocked with it). It survives Lock:
+ *  the plan page's Edit unlocks with it, Share copies it, Forget drops it, and so does a key the
+ *  server no longer takes (a new one was made). The empty-plan card puts it in the request for
+ *  an AI assistant while the plan is unlocked. */
 export function editKeyFor(planId: string): string | undefined {
   return editKeys()[planId];
 }
