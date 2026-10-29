@@ -156,8 +156,9 @@ function TopBar() {
 
 /** Share link for everyone, and the padlock: unlock with the plan's edit key, lock again. The
  *  server keeps the unlock in this browser's session and refuses edits to a locked plan. A key
- *  this device keeps (the plan was made here, or unlocked with it) survives Lock: Edit unlocks
- *  with it in one click, Share copies it for someone else, Forget drops it. */
+ *  this device keeps (the plan was made here, or unlocked with it) survives Lock. Unlocked,
+ *  Share copies it for someone else; locked, Edit unlocks with it in one click and Forget
+ *  drops it. */
 function Share({ id }: { id: string }) {
   const db = useDb();
   const { unlocked, recheck, storedKey, setStoredKey } = useContext(AccessContext);
@@ -228,14 +229,18 @@ function Share({ id }: { id: string }) {
           )}
         </span>
       )}
+      {/* unlocked: share the key with someone else; locked: unlock with it again, or forget it */}
       {storedKey && (
         <span className="row">
           <span className="share-note grow">Edit key stored on this device</span>
-          {!unlocked && (
-            <button type="button" className="btn primary" disabled={busy} onClick={() => void unlock(storedKey)}>Edit</button>
+          {unlocked ? (
+            <button type="button" className="btn subtle" onClick={shareKey}>{copied ? "Copied" : "Share"}</button>
+          ) : (
+            <>
+              <button type="button" className="btn primary" disabled={busy} onClick={() => void unlock(storedKey)}>Edit</button>
+              <button type="button" className="btn subtle" onClick={() => setStoredKey(undefined)}>Forget</button>
+            </>
           )}
-          <button type="button" className="btn subtle" onClick={shareKey}>{copied ? "Copied" : "Share"}</button>
-          <button type="button" className="btn subtle" onClick={() => setStoredKey(undefined)}>Forget</button>
         </span>
       )}
       {error && <span className="error" role="alert">{error}</span>}
