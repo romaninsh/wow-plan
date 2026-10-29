@@ -210,6 +210,9 @@ function Share({ id }: { id: string }) {
     <div className="panel share">
       <span className="label">Share</span>
       <CopyLine text={`${origin}/p/${id}`} />
+      {/* One row of buttons; which ones show is the state. Unlocked: Lock, and Share the kept key
+          with someone else. Locked with a kept key: Edit unlocks with it, Forget drops it.
+          Locked without one: Unlock asks for the key. */}
       {typing && !unlocked ? (
         <form className="row" onSubmit={(e) => { e.preventDefault(); void unlock(key); }}>
           <input className="input grow mono" value={key} maxLength={20} placeholder="Edit key" autoFocus aria-label="Edit key"
@@ -218,28 +221,23 @@ function Share({ id }: { id: string }) {
           <button type="button" className="btn subtle" onClick={() => { setTyping(false); setError(null); }}>Cancel</button>
         </form>
       ) : (
-        <span className="row">
-          <span className={`share-note grow ${unlocked ? "editor" : ""}`}>
-            {unlocked ? "Unlocked: you can edit this plan on this device." : "Locked: view only."}
-          </span>
+        <span className="row share-actions">
           {unlocked ? (
-            <button type="button" className="btn subtle" disabled={busy} onClick={() => void lock()}>Lock</button>
-          ) : (
-            !storedKey && <button type="button" className="btn subtle" onClick={() => setTyping(true)}>Unlock</button>
-          )}
-        </span>
-      )}
-      {/* unlocked: share the key with someone else; locked: unlock with it again, or forget it */}
-      {storedKey && (
-        <span className="row">
-          <span className="share-note grow">Edit key stored on this device</span>
-          {unlocked ? (
-            <button type="button" className="btn subtle" onClick={shareKey}>{copied ? "Copied" : "Share"}</button>
-          ) : (
             <>
-              <button type="button" className="btn primary" disabled={busy} onClick={() => void unlock(storedKey)}>Edit</button>
-              <button type="button" className="btn subtle" onClick={() => setStoredKey(undefined)}>Forget</button>
+              <button type="button" className="btn subtle" disabled={busy} onClick={() => void lock()}>Lock</button>
+              {storedKey && (
+                <button type="button" className="btn subtle" title="Copy the edit key" onClick={shareKey}>{copied ? "Copied" : "Share"}</button>
+              )}
             </>
+          ) : storedKey ? (
+            <>
+              <button type="button" className="btn primary" disabled={busy} title="Unlock with the key kept on this device"
+                onClick={() => void unlock(storedKey)}>Edit</button>
+              <button type="button" className="btn subtle" title="Forget the edit key on this device"
+                onClick={() => setStoredKey(undefined)}>Forget</button>
+            </>
+          ) : (
+            <button type="button" className="btn subtle" onClick={() => setTyping(true)}>Unlock</button>
           )}
         </span>
       )}
