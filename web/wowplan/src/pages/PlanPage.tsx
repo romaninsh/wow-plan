@@ -205,12 +205,15 @@ function Share({ id }: { id: string }) {
 interface Platform {
   key: string;
   name: string;
+  /** a glyph for the reward slot's icon square */
+  icon: string;
   steps: (s: { mcp: string; skillZip: string; skillMd: string; ask: string }) => { label: string; text?: string; body?: string; wrap?: boolean; link?: string }[];
 }
 const PLATFORMS: Platform[] = [
   {
     key: "claude-ai",
     name: "Claude.ai",
+    icon: "☁",
     steps: ({ mcp, skillZip, ask }) => [
       { label: "Add the connector", body: "Settings → Connectors → Add custom connector. Name it wow-plan, with this URL; no sign-in.", text: mcp },
       { label: "Optional: the planner skill", body: "It keeps the plan short and leaves the exploring to you. Download it, then Settings → Capabilities → Skills → Upload.", link: skillZip },
@@ -220,6 +223,7 @@ const PLATFORMS: Platform[] = [
   {
     key: "claude-code",
     name: "Claude Code",
+    icon: ">_",
     steps: ({ mcp, skillMd, ask }) => [
       { label: "Add the server", text: `claude mcp add --transport http wow-plan ${mcp}` },
       { label: "Optional: the planner skill", text: `curl -fsSL --create-dirs -o ~/.claude/skills/wow-plan-planner/SKILL.md ${skillMd}`, wrap: true },
@@ -228,9 +232,10 @@ const PLATFORMS: Platform[] = [
   },
 ];
 
-/** A plan with no goals yet: a quest-giver's card asking the player to let their AI assistant
- *  fill it in over wow-plan's MCP server (`/mcp` on this same host). First the platform, then
- *  that platform's steps. */
+/** A plan with no goals yet, laid out like the game's quest window: a dark frame with the quest
+ *  giver's portrait and name, a parchment page with the quest text, the assistants to choose
+ *  from as reward slots, then the chosen one's steps as the objectives. It asks the player to let
+ *  their AI assistant fill the plan over wow-plan's MCP server (`/mcp` on this same host). */
 function QuestPrompt({ id, editKey, characters }: { id: string; editKey?: string; characters: readonly PlanCharacters[] }) {
   const [platform, setPlatform] = useState<Platform | null>(null);
   const origin = window.location.origin;
@@ -240,33 +245,42 @@ function QuestPrompt({ id, editKey, characters }: { id: string; editKey?: string
   const skill = `${origin}/agent-skills/wow-plan-planner`;
   const steps = platform?.steps({ mcp: `${origin}/mcp`, skillZip: `${skill}.zip`, skillMd: `${skill}/SKILL.md`, ask });
   return (
-    <section className="panel quest">
-      <span className="quest-mark" aria-hidden="true">!</span>
-      <div className="quest-body">
-        <h2 className="quest-title">A plan without goals</h2>
+    <section className="quest" aria-labelledby="quest-title">
+      <div className="quest-bar">
+        <span className="quest-portrait" aria-hidden="true">!</span>
+        <span className="quest-giver">wow-plan</span>
+      </div>
+      <div className="quest-page">
+        <h2 className="quest-title" id="quest-title">A plan without goals</h2>
         <p className="quest-text">
-          Let your AI assistant fill it in: it looks the items, zones and dungeons up in the game
-          data and adds them here. Which one do you use?
+          This plan has no goals yet. Your AI assistant can write them: it looks the items, zones
+          and dungeons up in the game data and adds them here, while you play.
         </p>
-        <div className="row quest-platforms" role="radiogroup" aria-label="AI assistant">
+        <h3 className="quest-section">Your assistant</h3>
+        <p className="quest-text">Choose your assistant:</p>
+        <div className="quest-choices" role="radiogroup" aria-label="AI assistant">
           {PLATFORMS.map((p) => (
             <button key={p.key} type="button" role="radio" aria-checked={platform?.key === p.key}
-              className={`btn ${platform?.key === p.key ? "primary" : "subtle"}`} onClick={() => setPlatform(p)}>
-              {p.name}
+              className={`quest-choice ${platform?.key === p.key ? "chosen" : ""}`} onClick={() => setPlatform(p)}>
+              <span className="quest-icon" aria-hidden="true">{p.icon}</span>
+              <span className="quest-choice-name">{p.name}</span>
             </button>
           ))}
         </div>
         {steps && (
-          <ol className="quest-steps">
-            {steps.map((s) => (
-              <li key={s.label}>
-                <span className="label">{s.label}</span>
-                {s.body && <span className="quest-note">{s.body}</span>}
-                {s.text && <CopyLine text={s.text} wrap={s.wrap} />}
-                {s.link && <a className="btn subtle quest-download" href={s.link} download>Download wow-plan-planner.zip</a>}
-              </li>
-            ))}
-          </ol>
+          <>
+            <h3 className="quest-section">Objectives</h3>
+            <ol className="quest-steps">
+              {steps.map((s) => (
+                <li key={s.label}>
+                  <span className="quest-step-label">{s.label}</span>
+                  {s.body && <span className="quest-text">{s.body}</span>}
+                  {s.text && <CopyLine text={s.text} wrap={s.wrap} />}
+                  {s.link && <a className="btn subtle quest-download" href={s.link} download>Download wow-plan-planner.zip</a>}
+                </li>
+              ))}
+            </ol>
+          </>
         )}
       </div>
     </section>
