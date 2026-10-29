@@ -223,14 +223,20 @@ button, input, select { font: inherit; color: inherit; }
 }
 .quest-choice.chosen .quest-icon { border-color: var(--gold); }
 .quest-choice-name { font-family: var(--title); font-size: 15px; letter-spacing: .02em; }
-.quest-steps { margin: 0; padding-left: 22px; display: grid; gap: 12px; }
-.quest-steps li { display: grid; gap: 4px; }
+/* minmax(0, 1fr): a grid column is otherwise as wide as its longest command, which pushed the
+   Copy buttons out of the window */
+.quest-steps { margin: 0; padding-left: 22px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.quest-steps li { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; min-width: 0; }
 .quest-steps li::marker { font-family: var(--title); font-weight: 700; color: #3a1d06; }
 .quest-step-label { font-family: var(--title); font-weight: 700; font-size: 14px; color: #4a2a0c; }
 .quest-page code {
   color: #2b1607; background: rgba(90, 55, 20, 0.12); border: 1px solid rgba(90, 55, 20, 0.3);
-  border-radius: 2px; padding: 4px 8px;
+  border-radius: 2px; padding: 4px 8px; min-width: 0;
+  /* a command or URL has no spaces to wrap at: let it break anywhere, so Copy stays in view */
+  overflow-wrap: anywhere;
 }
+.quest-page .row { flex-wrap: nowrap; }
+.quest-page .row > .btn { flex: none; }
 .quest-download { justify-self: start; text-decoration: none; }
 
 /* ── level blocks: quest-log parchment ──────────────────────────────────────── */

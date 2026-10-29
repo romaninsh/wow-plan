@@ -225,7 +225,7 @@ const PLATFORMS: Platform[] = [
     name: "Claude Code",
     icon: ">_",
     steps: ({ mcp, skillMd, ask }) => [
-      { label: "Add the server", text: `claude mcp add --transport http wow-plan ${mcp}` },
+      { label: "Add the server", text: `claude mcp add --transport http wow-plan ${mcp}`, wrap: true },
       { label: "Optional: the planner skill", text: `curl -fsSL --create-dirs -o ~/.claude/skills/wow-plan-planner/SKILL.md ${skillMd}`, wrap: true },
       { label: "Then ask", text: ask, wrap: true },
     ],
