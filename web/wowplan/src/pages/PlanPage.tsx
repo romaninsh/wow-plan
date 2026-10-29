@@ -116,7 +116,7 @@ const Plan = observer(({ id }: { id: string }) => {
         </section>
 
         {targets.loadState !== "loading" && targets.items.length === 0 && (
-          <QuestPrompt id={id} editKey={newKey} characters={characters.items} />
+          <QuestPrompt id={id} editKey={newKey} />
         )}
         {blocks.items.map((b) => (
           <Block key={b.id} block={b} />
@@ -236,12 +236,13 @@ const PLATFORMS: Platform[] = [
  *  giver's portrait and name, a parchment page with the quest text, the assistants to choose
  *  from as reward slots, then the chosen one's steps as the objectives. It asks the player to let
  *  their AI assistant fill the plan over wow-plan's MCP server (`/mcp` on this same host). */
-function QuestPrompt({ id, editKey, characters }: { id: string; editKey?: string; characters: readonly PlanCharacters[] }) {
+function QuestPrompt({ id, editKey }: { id: string; editKey?: string }) {
   const [platform, setPlatform] = useState<Platform | null>(null);
   const origin = window.location.origin;
-  const who = characters.map((c) => `${c.name}, a ${c.race_name} ${c.class_name}`).join(" and ");
-  const ask = `Fill my wow-plan ${origin}/p/${id} with goals for levelling ${who || "my character"}. `
-    + `Edit key: ${editKey ?? "<your edit key>"}.`;
+  // an example request the player can send as it is or reword; it names this plan and its key
+  const ask = "I want to make a wow-plan: level a level 19 twink. I prefer Alliance. Not decided on "
+    + `class yet, but not a rogue. What do you think? Use my plan ${origin}/p/${id}, `
+    + `edit key ${editKey ?? "<your edit key>"}.`;
   const skill = `${origin}/agent-skills/wow-plan-planner`;
   const steps = platform?.steps({ mcp: `${origin}/mcp`, skillZip: `${skill}.zip`, skillMd: `${skill}/SKILL.md`, ask });
   return (
@@ -251,7 +252,7 @@ function QuestPrompt({ id, editKey, characters }: { id: string; editKey?: string
         <span className="quest-giver">wow-plan</span>
       </div>
       <div className="quest-page">
-        <h2 className="quest-title" id="quest-title">A plan without goals</h2>
+        <h2 className="quest-title" id="quest-title">Plan! Not a guide</h2>
         <p className="quest-text">
           This plan has no goals yet. Your AI assistant can write them: it looks the items, zones
           and dungeons up in the game data and adds them here, while you play.
