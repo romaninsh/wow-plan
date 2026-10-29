@@ -216,7 +216,7 @@ const PLATFORMS: Platform[] = [
     icon: "☁",
     steps: ({ mcp, skillZip, ask }) => [
       { label: "Add the connector", body: "Settings → Connectors → Add custom connector. Name it wow-plan, with this URL; no sign-in.", text: mcp },
-      { label: "Optional: the planner skill", body: "It keeps the plan short and leaves the exploring to you. Download it, then Settings → Capabilities → Skills → Upload.", link: skillZip },
+      { label: "Optional: the planner skill", body: "It keeps the plan short and leaves the exploring to you. Download it, then Customize → Skills → + → Upload a skill.", link: skillZip },
       { label: "Then, in a chat with wow-plan switched on, ask", text: ask, wrap: true },
     ],
   },
