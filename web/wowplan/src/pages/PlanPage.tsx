@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from "react-router";
 import { observer, useCollection, useConnection, useRecord } from "@vantage-ui/client/react";
 import { useDb } from "../db";
 import type { PlanBlocks, PlanCharacters, PlanTargets } from "../vantage.gen";
-import { rememberPlan, takeOldEditCode } from "../local";
+import { editKeyFor, forgetEditKey, rememberEditKey, rememberPlan, takeOldEditCode } from "../local";
 import { asKeys, asProfessions, asRef, asRefs, type GameRef } from "../shapes";
 import { GameRefLink } from "../components/GameRef";
 
@@ -52,12 +52,19 @@ const Plan = observer(({ id }: { id: string }) => {
       const open = r.ok && (r.value as { unlocked?: boolean }).unlocked === true;
       setUnlocked(open);
       rememberPlan(id, open);
+      // a key is kept only while the plan is unlocked here
+      if (r.ok && !open) forgetEditKey(id);
     });
   }, [db, id]);
   useEffect(() => {
     // an edit key kept from before the unlock (an old `#edit=` link or its cookie) unlocks once
     const old = takeOldEditCode(id);
-    if (old) void act(db, "unlock_plan", { plan_id: id, key: old }).then(recheck);
+    if (old) {
+      void act(db, "unlock_plan", { plan_id: id, key: old }).then((r) => {
+        if (r.ok) rememberEditKey(id, old);
+        recheck();
+      });
+    }
     else recheck();
   }, [db, id, recheck]);
   // Edits wait for the socket, so with it down nothing is editable. A reconnect may land in a
@@ -161,7 +168,12 @@ function Share({ id }: { id: string }) {
     const r = await act(db, action, { plan_id: id, ...args });
     setBusy(false);
     if (!r.ok) setError(r.error.message);
-    else { setTyping(false); setKey(""); }
+    else {
+      if (action === "unlock_plan") rememberEditKey(id, key.trim());
+      else forgetEditKey(id);
+      setTyping(false);
+      setKey("");
+    }
     recheck();
   };
 
@@ -238,11 +250,14 @@ const PLATFORMS: Platform[] = [
  *  their AI assistant fill the plan over wow-plan's MCP server (`/mcp` on this same host). */
 function QuestPrompt({ id, editKey }: { id: string; editKey?: string }) {
   const [platform, setPlatform] = useState<Platform | null>(null);
+  const { unlocked } = useContext(AccessContext);
   const origin = window.location.origin;
+  // the key goes in only while the plan is unlocked here (made here, or unlocked with it)
+  const key = (unlocked ? editKey ?? editKeyFor(id) : undefined) ?? "<your edit key>";
   // an example request the player can send as it is or reword; it names this plan and its key
   const ask = "I want to make a wow-plan: level a level 19 twink. I prefer Alliance. Not decided on "
     + `class yet, but not a rogue. What do you think? Use my plan ${origin}/p/${id}, `
-    + `edit key ${editKey ?? "<your edit key>"}.`;
+    + `edit key ${key}.`;
   const skill = `${origin}/agent-skills/wow-plan-planner`;
   const steps = platform?.steps({ mcp: `${origin}/mcp`, skillZip: `${skill}.zip`, skillMd: `${skill}/SKILL.md`, ask });
   return (
@@ -276,7 +291,7 @@ function QuestPrompt({ id, editKey }: { id: string; editKey?: string }) {
                 <li key={s.label}>
                   <span className="quest-step-label">{s.label}</span>
                   {s.body && <span className="quest-text">{s.body}</span>}
-                  {s.text && <CopyLine text={s.text} wrap={s.wrap} />}
+                  {s.text && <CopyLine text={s.text} wrap={s.wrap} mark={key} />}
                   {s.link && <a className="btn subtle quest-download" href={s.link} download>Download wow-plan-planner.zip</a>}
                 </li>
               ))}
@@ -288,11 +303,21 @@ function QuestPrompt({ id, editKey }: { id: string; editKey?: string }) {
   );
 }
 
-function CopyLine({ text, wrap = false }: { text: string; wrap?: boolean }) {
+/** Text with a Copy button. `mark`, when it occurs in the text, shows in red (an edit key):
+ *  only the look changes, Copy takes the whole text. */
+function CopyLine({ text, wrap = false, mark }: { text: string; wrap?: boolean; mark?: string }) {
   const [copied, setCopied] = useState(false);
+  const at = mark ? text.indexOf(mark) : -1;
+  const shown = at < 0 || !mark ? text : (
+    <>
+      {text.slice(0, at)}
+      <span className="secret">{mark}</span>
+      {text.slice(at + mark.length)}
+    </>
+  );
   return (
     <span className="row">
-      <code className="grow mono" style={wrap ? { whiteSpace: "normal" } : { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{text}</code>
+      <code className="grow mono" style={wrap ? { whiteSpace: "normal" } : { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{shown}</code>
       <button type="button" className="btn subtle" onClick={() => {
         void navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
       }}>{copied ? "Copied" : "Copy"}</button>

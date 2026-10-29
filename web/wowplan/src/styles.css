@@ -236,6 +236,8 @@ button, input, select { font: inherit; color: inherit; }
   overflow-wrap: anywhere;
 }
 .quest-page .row { flex-wrap: nowrap; }
+/* the edit key in a request: whoever has it may change the plan */
+.quest-page .secret { color: #b3120f; font-weight: 700; }
 .quest-page .row > .btn { flex: none; }
 .quest-download { justify-self: start; text-decoration: none; }
 

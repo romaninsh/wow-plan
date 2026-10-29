@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { observer, useCollection, useRecord, useRun } from "@vantage-ui/client/react";
 import { useDb } from "../db";
-import { recentPlans, rememberPlan } from "../local";
+import { recentPlans, rememberEditKey, rememberPlan } from "../local";
 
 interface CharacterDraft {
   name: string;
@@ -54,6 +54,7 @@ const NewPlanForm = observer(() => {
     if (create.status === "done" && result?.id && result.edit_code) {
       // the server unlocked the new plan in this session; the key is shown once, on the plan page
       rememberPlan(result.id, true);
+      rememberEditKey(result.id, result.edit_code);
       navigate(`/p/${result.id}`, { state: { editKey: result.edit_code } });
     }
   }, [create.status, result, navigate]);
