@@ -13,9 +13,9 @@ kind: script
 description: >
   Make a new plan: a name and one or two characters, each { name, race_id, class_id } (a
   race and class pair from class_race_combos; both characters on one side). The plan is
-  unlocked in this session. Returns { id, edit_code }: id is the plan's link id, edit_code the
-  key that unlocks it elsewhere, shown only this once. Rate-limited: five plans, then one
-  every 20 seconds.
+  unlocked in this session. Returns { id, url, edit_code }: url is the plan's page, the link to
+  give the player; id is its 7-character id; edit_code the key that unlocks it elsewhere, shown
+  only this once. Rate-limited: five plans, then one every 20 seconds.
 rate_limit: { per_second: 0.05, burst: 5 }
 params:
   name: { type: string }
@@ -108,4 +108,8 @@ body: |
     table("plan_character").insert(d);
   }
 
-  #{ id: id, edit_code: code }
+  // the plan's page on the site the caller reached (vantage-server's request.origin); the
+  // desktop has no request, so no url there
+  let out = #{ id: id, edit_code: code };
+  if is_def_var("request") && request.origin != () { out.url = `${request.origin}/p/${id}`; }
+  out

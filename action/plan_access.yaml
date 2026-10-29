@@ -5,11 +5,14 @@
 kind: script
 description: >
   Say whether this session may change a plan: it was unlocked with the plan's edit key and not
-  locked since. Takes plan_id. Returns { unlocked: true | false }.
+  locked since. Takes plan_id. Returns { unlocked: true | false, url }, url being the plan's
+  page.
 params:
   plan_id: { type: string }
 dialog:
   title: Plan access
 body: |
   let plan_id = if args.plan_id == () { "" } else { `${args.plan_id}` };
-  #{ unlocked: plan_id != "" && session.has("plans", plan_id) }
+  let out = #{ unlocked: plan_id != "" && session.has("plans", plan_id) };
+  if plan_id != "" && is_def_var("request") && request.origin != () { out.url = `${request.origin}/p/${plan_id}`; }
+  out

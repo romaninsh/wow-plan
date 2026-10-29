@@ -24,8 +24,10 @@ A plan is a player's own list of goals, grouped into level brackets. You fill it
 4. **Add as you go.** Look a thing up, then add it at once with `add_target`. Don't collect the
    whole plan and write it at the end: the player is watching, a long silent run looks broken,
    and if you stop early nothing is saved.
-5. **Finish with a short report:** what you added per bracket, and what you couldn't add or
-   aren't sure of.
+5. **Finish with a short report:** the plan's link (the `url` that `unlock_plan`, `plan_access`
+   or `create_plan` returned; never build one yourself), what you added per bracket, and what
+   you couldn't add or aren't sure of. A plan you made with `create_plan` also comes with its
+   `edit_code`: give it to the player once, it isn't shown again.
 
 ## Looking things up
 
