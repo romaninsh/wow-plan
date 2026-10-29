@@ -5,8 +5,7 @@ description: >
   refer to (items, quests, zones, areas, dungeons, skills and professions of one client build).
   A plan is opened by its 7-character id (the link someone shared); there is no list of plans.
   create_plan, unlock_plan and plan_access return the plan's page as url: give the player that
-  link, don't build one.
-  It has one or two characters (plan_characters), level brackets (plan_blocks) and targets,
+  link, don't build one. A plan has one or two characters (plan_characters), level brackets (plan_blocks) and targets,
   the player's own goals (plan_targets), each read under its plan (parent_id). Anyone with the
   id reads a plan. Changing it needs its 4-character edit key: unlock_plan with the key unlocks
   it in this session, and every change to a locked plan is refused. Find game records by name
@@ -17,6 +16,15 @@ description: >
   empty one. Then add_target, update_target, move_target, remove_target, tick_todo and
   set_target_notes. The data names things and their levels; it never says what is best, and it
   has no drop sources: leave those to the player or to the target's notes.
+
+  When you plan for a player: a plan is a short list of goals, not a walkthrough; exploring and
+  asking other players is the point of the game. Add the fewest to-dos that get them there, one
+  per zone to level in rather than one per quest. A to-do about an item, zone, dungeon, quest or
+  recipe is that kind, linked by ref (an object, { item_id: 5191 }); note is only for a goal
+  with no game record. Leave notes out unless they say something the player can't see on the
+  page or find by playing; one short sentence. If a linked to-do is refused and you can't see
+  why, say so to the player instead of adding it as a note. A longer guide is the
+  wow-plan-planner skill, at /agent-skills/wow-plan-planner/SKILL.md on this site.
 
 entities:
   # ── guides (MongoDB) ─────────────────────────────────────────────────────────

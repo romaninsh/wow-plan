@@ -41,6 +41,36 @@ export function recentPlans(): RecentPlan[] {
   }
 }
 
+const KEYS_KEY = "wowplan.keys";
+
+function editKeys(): Record<string, string> {
+  try {
+    const keys = JSON.parse(localStorage.getItem(KEYS_KEY) ?? "{}");
+    return keys && typeof keys === "object" ? keys : {};
+  } catch {
+    return {};
+  }
+}
+
+/** The edit key this browser used for a plan (made here, or unlocked with it). It survives Lock:
+ *  unlocked, the plan page's Share copies it; locked, Edit unlocks with it and Forget drops it,
+ *  as does a key the server no longer takes (a new one was made). The empty-plan card puts it
+ *  in the request for an AI assistant while the plan is unlocked. */
+export function editKeyFor(planId: string): string | undefined {
+  return editKeys()[planId];
+}
+
+export function rememberEditKey(planId: string, key: string): void {
+  localStorage.setItem(KEYS_KEY, JSON.stringify({ ...editKeys(), [planId]: key }));
+}
+
+export function forgetEditKey(planId: string): void {
+  const keys = editKeys();
+  if (!(planId in keys)) return;
+  delete keys[planId];
+  localStorage.setItem(KEYS_KEY, JSON.stringify(keys));
+}
+
 export function rememberPlan(id: string, editable?: boolean): void {
   const list = recentPlans();
   const previous = list.find((p) => p.id === id);

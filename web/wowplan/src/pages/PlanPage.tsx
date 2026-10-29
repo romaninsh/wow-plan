@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from "react-router";
 import { observer, useCollection, useConnection, useRecord } from "@vantage-ui/client/react";
 import { useDb } from "../db";
 import type { PlanBlocks, PlanCharacters, PlanTargets } from "../vantage.gen";
-import { rememberPlan, takeOldEditCode } from "../local";
+import { editKeyFor, forgetEditKey, rememberEditKey, rememberPlan, takeOldEditCode } from "../local";
 import { asKeys, asProfessions, asRef, asRefs, type GameRef } from "../shapes";
 import { GameRefLink } from "../components/GameRef";
 
@@ -12,8 +12,14 @@ interface Who { name: string; cls: string }
 const WhoContext = createContext<Map<string, Who>>(new Map());
 
 /** Whether this session may edit the plan (the server's plan_access); edit controls show only then. */
-interface Access { unlocked: boolean; recheck: () => void }
-const AccessContext = createContext<Access>({ unlocked: false, recheck: () => {} });
+interface Access {
+  unlocked: boolean;
+  recheck: () => void;
+  /** the edit key this device keeps for the plan, if any */
+  storedKey: string | undefined;
+  setStoredKey: (key: string | undefined) => void;
+}
+const AccessContext = createContext<Access>({ unlocked: false, recheck: () => {}, storedKey: undefined, setStoredKey: () => {} });
 
 /** CSS class for a class's colour (styles.css: .cls-warlock …) */
 const clsOf = (className: string | null) => `cls-${(className ?? "").toLowerCase().replace(/[^a-z]/g, "")}`;
@@ -40,10 +46,6 @@ const Plan = observer(({ id }: { id: string }) => {
   const characters = useCollection(db.plan_characters.where({ plan_id: id }));
   const blocks = useCollection(db.plan_blocks.where({ plan_id: id }));
   const targets = useCollection(db.plan_targets.where({ plan_id: id }));
-  // a plan made a moment ago: its key, for the AI prompt. Read on the first render, before
-  // Share takes it out of the history entry.
-  const location = useLocation();
-  const [newKey] = useState(() => (location.state as { editKey?: string } | null)?.editKey);
 
   // the padlock: whether this session unlocked the plan, as the server says
   const [unlocked, setUnlocked] = useState(false);
@@ -54,12 +56,25 @@ const Plan = observer(({ id }: { id: string }) => {
       rememberPlan(id, open);
     });
   }, [db, id]);
+  // the edit key this device keeps for the plan (made here, or unlocked with it): locking keeps
+  // it, so Edit unlocks again in one click; Forget, or a key the server no longer takes, drops it
+  const [storedKey, setStoredKeyState] = useState(() => editKeyFor(id));
+  const setStoredKey = useCallback((k: string | undefined) => {
+    if (k) rememberEditKey(id, k);
+    else forgetEditKey(id);
+    setStoredKeyState(k);
+  }, [id]);
   useEffect(() => {
     // an edit key kept from before the unlock (an old `#edit=` link or its cookie) unlocks once
     const old = takeOldEditCode(id);
-    if (old) void act(db, "unlock_plan", { plan_id: id, key: old }).then(recheck);
+    if (old) {
+      void act(db, "unlock_plan", { plan_id: id, key: old }).then((r) => {
+        if (r.ok) setStoredKey(old);
+        recheck();
+      });
+    }
     else recheck();
-  }, [db, id, recheck]);
+  }, [db, id, recheck, setStoredKey]);
   // Edits wait for the socket, so with it down nothing is editable. A reconnect may land in a
   // new session (the server restarted, or the session timed out), so ask again once it's back.
   const { status: connection } = useConnection();
@@ -69,7 +84,10 @@ const Plan = observer(({ id }: { id: string }) => {
     if (online && !wasOnline) recheck();
     setWasOnline(online);
   }, [online, wasOnline, recheck]);
-  const access = useMemo(() => ({ unlocked: unlocked && online, recheck }), [unlocked, online, recheck]);
+  const access = useMemo(
+    () => ({ unlocked: unlocked && online, recheck, storedKey, setStoredKey }),
+    [unlocked, online, recheck, storedKey, setStoredKey],
+  );
 
   const who = useMemo(() => {
     const m = new Map<string, Who>();
@@ -116,7 +134,7 @@ const Plan = observer(({ id }: { id: string }) => {
         </section>
 
         {targets.loadState !== "loading" && targets.items.length === 0 && (
-          <QuestPrompt id={id} editKey={newKey} characters={characters.items} />
+          <QuestPrompt id={id} />
         )}
         {blocks.items.map((b) => (
           <Block key={b.id} block={b} />
@@ -137,32 +155,54 @@ function TopBar() {
 }
 
 /** Share link for everyone, and the padlock: unlock with the plan's edit key, lock again. The
- *  server keeps the unlock in this browser's session and refuses edits to a locked plan. */
+ *  server keeps the unlock in this browser's session and refuses edits to a locked plan. A key
+ *  this device keeps (the plan was made here, or unlocked with it) survives Lock. Unlocked,
+ *  Share copies it for someone else; locked, Edit unlocks with it in one click and Forget
+ *  drops it. */
 function Share({ id }: { id: string }) {
   const db = useDb();
-  const { unlocked, recheck } = useContext(AccessContext);
-  // a plan made a moment ago on the intro screen: its key, shown this once. Taken out of the
-  // history entry at once, so a reload or Back doesn't show it again.
+  const { unlocked, recheck, storedKey, setStoredKey } = useContext(AccessContext);
+  // a plan made a moment ago arrives with its key in the history entry; it is stored already
+  // (Home), so take it out, and a reload or Back starts clean
   const location = useLocation();
   const navigate = useNavigate();
-  const [newKey] = useState(() => (location.state as { editKey?: string } | null)?.editKey);
   useEffect(() => {
-    if (newKey) navigate(location.pathname, { replace: true, state: null });
+    if ((location.state as { editKey?: string } | null)?.editKey) navigate(location.pathname, { replace: true, state: null });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [typing, setTyping] = useState(false);
   const [key, setKey] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
-  const run = async (action: "unlock_plan" | "lock_plan", args: Record<string, unknown>) => {
+  const unlock = async (withKey: string) => {
     setBusy(true);
     setError(null);
-    const r = await act(db, action, { plan_id: id, ...args });
+    const r = await act(db, "unlock_plan", { plan_id: id, key: withKey.trim() });
+    setBusy(false);
+    if (r.ok) {
+      setStoredKey(withKey.trim());
+      setTyping(false);
+      setKey("");
+    } else {
+      // the kept key no longer opens the plan (a new key was made): drop it
+      if (withKey === storedKey) setStoredKey(undefined);
+      setError(r.error.message);
+    }
+    recheck();
+  };
+  const lock = async () => {
+    setBusy(true);
+    setError(null);
+    const r = await act(db, "lock_plan", { plan_id: id });
     setBusy(false);
     if (!r.ok) setError(r.error.message);
-    else { setTyping(false); setKey(""); }
     recheck();
+  };
+  const shareKey = () => {
+    if (!storedKey) return;
+    void navigator.clipboard.writeText(storedKey).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
   };
 
   const origin = window.location.origin;
@@ -170,26 +210,32 @@ function Share({ id }: { id: string }) {
     <div className="panel share">
       <span className="label">Share</span>
       <CopyLine text={`${origin}/p/${id}`} />
-      {unlocked && newKey && (
-        <>
-          <span className="label">Edit key: it unlocks the plan on another device. Copy it now, it isn't shown again</span>
-          <CopyLine text={newKey} />
-        </>
-      )}
+      {/* One row of buttons; which ones show is the state. Unlocked: Lock, and Share the kept key
+          with someone else. Locked with a kept key: Edit unlocks with it, Forget drops it.
+          Locked without one: Unlock asks for the key. */}
       {typing && !unlocked ? (
-        <form className="row" onSubmit={(e) => { e.preventDefault(); void run("unlock_plan", { key }); }}>
+        <form className="row" onSubmit={(e) => { e.preventDefault(); void unlock(key); }}>
           <input className="input grow mono" value={key} maxLength={20} placeholder="Edit key" autoFocus aria-label="Edit key"
             onChange={(e) => setKey(e.target.value)} />
           <button type="submit" className="btn primary" disabled={busy || key.trim() === ""}>Unlock</button>
           <button type="button" className="btn subtle" onClick={() => { setTyping(false); setError(null); }}>Cancel</button>
         </form>
       ) : (
-        <span className="row">
-          <span className={`share-note grow ${unlocked ? "editor" : ""}`}>
-            {unlocked ? "Unlocked: you can edit this plan on this device." : "Locked: view only."}
-          </span>
+        <span className="row share-actions">
           {unlocked ? (
-            <button type="button" className="btn subtle" disabled={busy} onClick={() => void run("lock_plan", {})}>Lock</button>
+            <>
+              <button type="button" className="btn subtle" disabled={busy} onClick={() => void lock()}>Lock</button>
+              {storedKey && (
+                <button type="button" className="btn subtle" title="Copy the edit key" onClick={shareKey}>{copied ? "Copied" : "Share"}</button>
+              )}
+            </>
+          ) : storedKey ? (
+            <>
+              <button type="button" className="btn primary" disabled={busy} title="Unlock with the key kept on this device"
+                onClick={() => void unlock(storedKey)}>Edit</button>
+              <button type="button" className="btn subtle" title="Forget the edit key on this device"
+                onClick={() => setStoredKey(undefined)}>Forget</button>
+            </>
           ) : (
             <button type="button" className="btn subtle" onClick={() => setTyping(true)}>Unlock</button>
           )}
@@ -200,46 +246,112 @@ function Share({ id }: { id: string }) {
   );
 }
 
-/** A plan with no goals yet: a quest-giver's card asking the player to let their AI assistant
- *  fill it in over wow-plan's MCP server (`/mcp` on this same host). */
-function QuestPrompt({ id, editKey, characters }: { id: string; editKey?: string; characters: readonly PlanCharacters[] }) {
+/** What a player does on one AI platform to let it fill a plan: connect wow-plan's MCP server,
+ *  optionally add the planner skill, then ask. More platforms go in PLATFORMS. */
+interface Platform {
+  key: string;
+  name: string;
+  /** a glyph for the reward slot's icon square */
+  icon: string;
+  steps: (s: { mcp: string; skillZip: string; skillMd: string; ask: string }) => { label: string; text?: string; body?: string; wrap?: boolean; link?: string }[];
+}
+const PLATFORMS: Platform[] = [
+  {
+    key: "claude-ai",
+    name: "Claude.ai",
+    icon: "☁",
+    steps: ({ mcp, skillZip, ask }) => [
+      { label: "Add the connector", body: "Settings → Connectors → Add custom connector. Name it wow-plan, with this URL; no sign-in.", text: mcp },
+      { label: "Optional: the planner skill", body: "It keeps the plan short and leaves the exploring to you. Download it, then Customize → Skills → + → Upload a skill.", link: skillZip },
+      { label: "Then, in a chat with wow-plan switched on, ask", text: ask, wrap: true },
+    ],
+  },
+  {
+    key: "claude-code",
+    name: "Claude Code",
+    icon: ">_",
+    steps: ({ mcp, skillMd, ask }) => [
+      { label: "Add the server", text: `claude mcp add --transport http wow-plan ${mcp}`, wrap: true },
+      { label: "Optional: the planner skill", text: `curl -fsSL --create-dirs -o ~/.claude/skills/wow-plan-planner/SKILL.md ${skillMd}`, wrap: true },
+      { label: "Then ask", text: ask, wrap: true },
+    ],
+  },
+];
+
+/** A plan with no goals yet, laid out like the game's quest window: a dark frame with the quest
+ *  giver's portrait and name, a parchment page with the quest text, the assistants to choose
+ *  from as reward slots, then the chosen one's steps as the objectives. It asks the player to let
+ *  their AI assistant fill the plan over wow-plan's MCP server (`/mcp` on this same host). */
+function QuestPrompt({ id }: { id: string }) {
+  const [platform, setPlatform] = useState<Platform | null>(null);
+  const { unlocked, storedKey } = useContext(AccessContext);
   const origin = window.location.origin;
-  const who = characters.map((c) => `${c.name}, a ${c.race_name} ${c.class_name}`).join(" and ");
-  const ask = `Fill my wow-plan ${origin}/p/${id} with goals for levelling ${who || "my character"}. `
-    + `Edit key: ${editKey ?? "<your edit key>"}.`;
+  // the key goes in only while the plan is unlocked here
+  const key = (unlocked ? storedKey : undefined) ?? "<your edit key>";
+  // an example request the player can send as it is or reword; it names this plan and its key
+  const ask = "I want to make a wow-plan: level a level 19 twink. I prefer Alliance. Not decided on "
+    + `class yet, but not a rogue. What do you think? Use my plan ${origin}/p/${id}, `
+    + `edit key ${key}.`;
+  const skill = `${origin}/agent-skills/wow-plan-planner`;
+  const steps = platform?.steps({ mcp: `${origin}/mcp`, skillZip: `${skill}.zip`, skillMd: `${skill}/SKILL.md`, ask });
   return (
-    <section className="panel quest">
-      <span className="quest-mark" aria-hidden="true">!</span>
-      <div className="quest-body">
-        <h2 className="quest-title">A plan without goals</h2>
+    <section className="quest" aria-labelledby="quest-title">
+      <div className="quest-bar">
+        <span className="quest-portrait" aria-hidden="true">!</span>
+        <span className="quest-giver">wow-plan</span>
+      </div>
+      <div className="quest-page">
+        <h2 className="quest-title" id="quest-title">Plan! Not a guide</h2>
         <p className="quest-text">
-          Let your AI assistant fill it in. Connect wow-plan to it as an MCP server, then ask it to plan
-          your way: it looks the items, zones and dungeons up in the game data and adds them here.
+          This plan has no goals yet. Your AI assistant can write them: it looks the items, zones
+          and dungeons up in the game data and adds them here, while you play.
         </p>
-        <ol className="quest-steps">
-          <li>
-            <span className="label">MCP server</span>
-            <CopyLine text={`${origin}/mcp`} />
-          </li>
-          <li>
-            <span className="label">In Claude Code</span>
-            <CopyLine text={`claude mcp add --transport http wow-plan ${origin}/mcp`} />
-          </li>
-          <li>
-            <span className="label">Then ask</span>
-            <CopyLine text={ask} wrap />
-          </li>
-        </ol>
+        <h3 className="quest-section">Your assistant</h3>
+        <p className="quest-text">Choose your assistant:</p>
+        <div className="quest-choices" role="radiogroup" aria-label="AI assistant">
+          {PLATFORMS.map((p) => (
+            <button key={p.key} type="button" role="radio" aria-checked={platform?.key === p.key}
+              className={`quest-choice ${platform?.key === p.key ? "chosen" : ""}`} onClick={() => setPlatform(p)}>
+              <span className="quest-icon" aria-hidden="true">{p.icon}</span>
+              <span className="quest-choice-name">{p.name}</span>
+            </button>
+          ))}
+        </div>
+        {steps && (
+          <>
+            <h3 className="quest-section">Objectives</h3>
+            <ol className="quest-steps">
+              {steps.map((s) => (
+                <li key={s.label}>
+                  <span className="quest-step-label">{s.label}</span>
+                  {s.body && <span className="quest-text">{s.body}</span>}
+                  {s.text && <CopyLine text={s.text} wrap={s.wrap} mark={key} />}
+                  {s.link && <a className="btn subtle quest-download" href={s.link} download>Download wow-plan-planner.zip</a>}
+                </li>
+              ))}
+            </ol>
+          </>
+        )}
       </div>
     </section>
   );
 }
 
-function CopyLine({ text, wrap = false }: { text: string; wrap?: boolean }) {
+/** Text with a Copy button. `mark`, when it occurs in the text, shows in red (an edit key):
+ *  only the look changes, Copy takes the whole text. */
+function CopyLine({ text, wrap = false, mark }: { text: string; wrap?: boolean; mark?: string }) {
   const [copied, setCopied] = useState(false);
+  const at = mark ? text.indexOf(mark) : -1;
+  const shown = at < 0 || !mark ? text : (
+    <>
+      {text.slice(0, at)}
+      <span className="secret">{mark}</span>
+      {text.slice(at + mark.length)}
+    </>
+  );
   return (
     <span className="row">
-      <code className="grow mono" style={wrap ? { whiteSpace: "normal" } : { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{text}</code>
+      <code className="grow mono" style={wrap ? { whiteSpace: "normal" } : { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{shown}</code>
       <button type="button" className="btn subtle" onClick={() => {
         void navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
       }}>{copied ? "Copied" : "Copy"}</button>
