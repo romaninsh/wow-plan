@@ -4,6 +4,8 @@ description: >
   wow-plan.com: personal leveling plans for World of Warcraft: Forever, and the game data they
   refer to (items, quests, zones, areas, dungeons, skills and professions of one client build).
   A plan is opened by its 7-character id (the link someone shared); there is no list of plans.
+  create_plan, unlock_plan and plan_access return the plan's page as url: give the player that
+  link, don't build one.
   It has one or two characters (plan_characters), level brackets (plan_blocks) and targets,
   the player's own goals (plan_targets), each read under its plan (parent_id). Anyone with the
   id reads a plan. Changing it needs its 4-character edit key: unlock_plan with the key unlocks

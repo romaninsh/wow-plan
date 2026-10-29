@@ -9,8 +9,9 @@ kind: script
 description: >
   Unlock a plan for editing in this session with the plan's edit key (4 characters, from
   whoever made the plan). Until then every change to the plan is refused. Takes plan_id (the
-  7-character id in the plan's link) and key. Returns { unlocked: true }; a wrong key is an
-  error. Rate-limited: five tries, then one every 5 seconds.
+  7-character id in the plan's link) and key. Returns { unlocked: true, url }, url being the
+  plan's page to give the player; a wrong key is an error. Rate-limited: five tries, then one
+  every 5 seconds.
 rate_limit: { per_second: 0.2, burst: 5 }
 params:
   plan_id: { type: string }
@@ -27,4 +28,6 @@ body: |
     fail("That key doesn't unlock this plan");
   }
   session.add("plans", plan_id);
-  #{ unlocked: true }
+  let out = #{ unlocked: true };
+  if is_def_var("request") && request.origin != () { out.url = `${request.origin}/p/${plan_id}`; }
+  out

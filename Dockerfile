@@ -2,9 +2,9 @@
 # The wowplan API with its web frontend (wow-plan.com) on vantage-server.
 #   docker build --platform linux/amd64 --build-arg API=wowplan -t wow-plan:local .
 # pipeline/Dockerfile is a different image (the fetch/import pipeline).
-# 1.10.1: anonymous sessions, MCP at /mcp and offset() in action bodies (find_game_data).
+# 1.10.2: anonymous sessions, MCP at /mcp, offset() (find_game_data) and request.origin (plan urls).
 ARG WEB_DEV=romaninsh/vantage-web-dev:1.10.0
-ARG SERVER=romaninsh/vantage-server:1.10.1
+ARG SERVER=romaninsh/vantage-server:1.10.2
 
 # The built site is plain files, so this stage runs natively even when the
 # image is for another platform.
