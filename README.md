@@ -68,10 +68,12 @@ never opens by itself. The numbers live in `src/about.ts`, whose header says how
 (`python3 -I scripts/session_stats.py <session log>` and `git ls-files` counts); don't edit them
 by hand.
 
-Analytics (`src/analytics.ts`) uses the vantage-ui.com GA4 property (`G-R3BJYDRX24`), with
-cross-domain linking between vantage-ui.com and wow-plan.com and `content_group: demo-wow`. The
-tag loads only on `wow-plan.com`, `www.wow-plan.com` and `wow.demo.vantage-ui.com`; elsewhere
-`track()` logs `[ga] name params` to the console and sends nothing. Page views come from GA's
+Analytics (`src/analytics.ts`) sends to wow-plan.com's own GA4 stream. Its measurement ID comes
+from the `VITE_GA_MEASUREMENT_ID` build variable: `deploy.sh` passes `GA_MEASUREMENT_ID`
+(default `G-PDQC58CLYC`) as a Docker build arg, and a build without it sends nothing. It links
+sessions across vantage-ui.com and wow-plan.com and sets `content_group: demo-wow`. The tag loads
+only on `wow-plan.com`, `www.wow-plan.com` and `wow.demo.vantage-ui.com`; elsewhere `track()`
+logs `[ga] name params` to the console and sends nothing. Page views come from GA's
 enhanced measurement (the router uses the History API). Events: `about_open` (the footer link),
 `outbound_click` (any link to another host), and `demo_action` with `create_plan`,
 `unlock_plan`, `complete_goal` or `edit_notes`, each sent when the server accepts it.

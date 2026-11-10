@@ -1,11 +1,12 @@
-// Google Analytics: the same GA4 property as vantage-ui.com, linked across both domains. The tag
-// loads only on the production hosts; anywhere else (dev, tests, previews) track() logs
-// `[ga] name params` to the console and sends nothing.
+// Google Analytics: wow-plan.com's own GA4 stream, linked across vantage-ui.com and wow-plan.com.
+// The measurement ID comes from VITE_GA_MEASUREMENT_ID at build time (deploy.sh sets it). The tag
+// loads only when that is set and the page is on a production host; anywhere else (dev, tests,
+// previews, a build without the variable) track() logs `[ga] name params` and sends nothing.
 //
 // Page views come from GA's enhanced measurement, which follows the router's history changes, so
 // nothing here sends them.
 
-const MEASUREMENT_ID = "G-R3BJYDRX24";
+const MEASUREMENT_ID: string = import.meta.env.VITE_GA_MEASUREMENT_ID ?? "";
 const PRODUCTION_HOSTS = ["wow-plan.com", "www.wow-plan.com", "wow.demo.vantage-ui.com"];
 
 type Params = Record<string, string | number | boolean>;
@@ -21,7 +22,7 @@ let loaded = false;
 
 /** Loads gtag once, on a production host only. Says whether events go to GA. */
 function ensureGtag(): boolean {
-  if (!PRODUCTION_HOSTS.includes(location.hostname)) return false;
+  if (!MEASUREMENT_ID || !PRODUCTION_HOSTS.includes(location.hostname)) return false;
   if (loaded) return true;
   loaded = true;
   const script = document.createElement("script");

@@ -16,6 +16,8 @@ REGION=europe-west2
 SERVICE=wow-plan
 REGISTRY=$REGION-docker.pkg.dev/$PROJECT/wow-plan/wow-plan
 URL=https://wow-plan-u6faisil3q-nw.a.run.app
+# wow-plan.com's own GA4 stream; override with GA_MEASUREMENT_ID=… ./deploy.sh
+GA_MEASUREMENT_ID=${GA_MEASUREMENT_ID:-G-PDQC58CLYC}
 
 ROOT=$(cd "$(dirname "$0")" && pwd)
 cd "$ROOT"
@@ -44,7 +46,8 @@ TAG=$(date +%Y%m%d-%H%M)-$SHA
 IMG=$REGISTRY:$TAG
 
 echo "== building $IMG"
-docker build --platform linux/amd64 --build-arg API=wowplan -t "$IMG" .
+docker build --platform linux/amd64 --build-arg API=wowplan \
+  --build-arg VITE_GA_MEASUREMENT_ID="$GA_MEASUREMENT_ID" -t "$IMG" .
 
 # no env file may reach the image (.dockerignore keeps them out; check anyway)
 if docker run --rm --platform linux/amd64 --entrypoint sh "$IMG" -c 'find /app -name ".env*" | grep -q .'; then
