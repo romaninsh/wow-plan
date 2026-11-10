@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router";
 import { observer, useCollection, useConnection, useRecord } from "@vantage-ui/client/react";
+import { track } from "../analytics";
 import { useDb } from "../db";
 import type { PlanBlocks, PlanCharacters, PlanTargets } from "../vantage.gen";
 import { editKeyFor, forgetEditKey, rememberEditKey, rememberPlan, takeOldEditCode } from "../local";
@@ -182,6 +183,7 @@ function Share({ id }: { id: string }) {
     const r = await act(db, "unlock_plan", { plan_id: id, key: withKey.trim() });
     setBusy(false);
     if (r.ok) {
+      track("demo_action", { action: "unlock_plan" });
       setStoredKey(withKey.trim());
       setTyping(false);
       setKey("");
@@ -592,12 +594,13 @@ const Target = observer(({ target: t }: { target: PlanTargets }) => {
   const tick = async () => {
     setError(null);
     const r = await act(db, "tick_todo", { target_id: t.id, done: !done });
+    if (r.ok && !done) track("demo_action", { action: "complete_goal" });
     if (!r.ok) refused(r.error.message);
   };
   const saveNotes = async () => {
     setError(null);
     const r = await act(db, "set_target_notes", { target_id: t.id, notes: notes ?? "" });
-    if (r.ok) setNotes(null);
+    if (r.ok) { setNotes(null); track("demo_action", { action: "edit_notes" }); }
     else refused(r.error.message);
   };
 
