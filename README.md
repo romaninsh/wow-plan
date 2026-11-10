@@ -29,6 +29,7 @@ selecting an item shows it as an in-game style tooltip.*
 | `web/wowplan/` | the wow-plan.com React app (built by Vantage's web dev container) |
 | `tests/` | `api_actions.mjs`: checks the API's actions over the WebSocket (`node tests/api_actions.mjs <api url>`) |
 | `agents/` | notes for AI agents working on this repo (`BRIEF.md`) |
+| `scripts/` | `session_stats.py`: measures an agent's build session for the web app's About screen |
 | `composer.yaml` | local services Vantage starts |
 | `refs/` | downloads: the opendata clone and wago.tools exports. Not committed |
 | `data/` | local database files. Not committed |
@@ -55,3 +56,26 @@ python3 pipeline/pipeline.py import     # dbt build, then publish to Postgres sc
 
 `import` on the host needs `.venv` (`python3 -m venv .venv && .venv/bin/pip install dbt-duckdb`).
 Details: [dbt/README.md](dbt/README.md).
+
+## Web app
+
+`web/wowplan/` is wow-plan.com: the intro page (`/`) and a plan by its link (`/p/<id>`).
+
+A small "About this demo" link at the foot of every page opens `/about`
+(`src/components/About.tsx`): what the site is, that an AI agent built it in Vantage UI, how it
+was built in measured numbers, and what Vantage replaced compared with building it by hand. It
+never opens by itself. The numbers live in `src/about.ts`, whose header says how to refresh them
+(`python3 -I scripts/session_stats.py <session log>` and `git ls-files` counts); don't edit them
+by hand.
+
+Analytics (`src/analytics.ts`) uses the vantage-ui.com GA4 property (`G-R3BJYDRX24`), with
+cross-domain linking between vantage-ui.com and wow-plan.com and `content_group: demo-wow`. The
+tag loads only on `wow-plan.com`, `www.wow-plan.com` and `wow.demo.vantage-ui.com`; elsewhere
+`track()` logs `[ga] name params` to the console and sends nothing. Page views come from GA's
+enhanced measurement (the router uses the History API). Events: `about_open` (the footer link),
+`outbound_click` (any link to another host), and `demo_action` with `create_plan`,
+`unlock_plan`, `complete_goal` or `edit_notes`, each sent when the server accepts it.
+
+```bash
+cd web/wowplan && npm test && npm run typecheck
+```

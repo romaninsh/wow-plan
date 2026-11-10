@@ -1,0 +1,71 @@
+/* About this demo (components/About.tsx) and the link to it at the foot of every page. The same
+   stone, gold trim and Cinzel capitals as styles.css; the card is a .panel frame. */
+
+.site-foot { text-align: center; padding: 0 22px 22px; margin-top: -56px; }
+.site-foot a {
+  font-family: var(--title); font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--text-dim); opacity: .7; text-decoration: none;
+}
+.site-foot a:hover, .site-foot a:focus-visible { opacity: 1; color: var(--gold); }
+
+.about {
+  position: fixed; inset: 0; z-index: 900; overflow-y: auto;
+  background: rgba(14, 11, 8, 0.86); backdrop-filter: blur(3px);
+  animation: about-in .2s ease-out;
+}
+@keyframes about-in { from { opacity: 0; } }
+.about-frame { min-height: 100%; display: flex; align-items: center; justify-content: center; padding: clamp(14px, 4vw, 36px); }
+.about-card { width: 100%; max-width: 1040px; padding: clamp(22px, 4vw, 36px); }
+.about-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 24px; }
+.about-top .label { margin: 0; }
+.about-logo { height: 24px; width: auto; filter: invert(1) sepia(.5) brightness(.9); opacity: .85; }
+
+.about-hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; margin-top: 24px; }
+@media (max-width: 900px) { .about-hero { grid-template-columns: minmax(0, 1fr); gap: 28px; } }
+.about-intro { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.about-intro p { margin: 0; line-height: 1.55; color: var(--text-dim); }
+.about h1.brand { margin: 0; font-size: 34px; line-height: 1.1; }
+.about h1.brand small { font-size: 20px; }
+.about .about-tagline { font-family: var(--title); font-size: 20px; color: var(--gold); margin-top: -6px; }
+.about .about-lead { color: var(--text); font-size: 18px; font-style: italic; }
+.about-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding-top: 6px; }
+.about-buttons a.btn { text-decoration: none; text-shadow: none; }
+.about-jump {
+  align-self: flex-start; border: 0; background: none; padding: 0; cursor: pointer;
+  font-family: var(--title); font-size: 12.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--gold-2);
+}
+.about-jump:hover { color: var(--gold); text-decoration: underline; text-underline-offset: 3px; }
+
+.about-numbers { display: flex; flex-direction: column; gap: 12px; min-width: 0; align-self: center; }
+.about-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; }
+@media (max-width: 420px) { .about-stats { grid-template-columns: minmax(0, 1fr); } }
+.about-stat {
+  padding: 12px 14px; border: 1px solid var(--bronze); border-radius: 2px;
+  background: linear-gradient(180deg, #1e1913, #2b241b); box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+.about-stat dd {
+  margin: 0; font-family: var(--title); font-weight: 700; font-size: 23px; color: var(--gold); white-space: nowrap;
+  font-variant-numeric: tabular-nums lining-nums; text-shadow: 0 1px 0 #000;
+}
+.about-stat dt { margin-top: 2px; font-family: var(--title); font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--gold-2); }
+.about-stat p { margin: 4px 0 0; font-size: 13.5px; line-height: 1.35; color: var(--text-dim); }
+.about-note { margin: 0; font-size: 14px; line-height: 1.45; font-style: italic; color: var(--text-dim); }
+
+.about-compare { margin-top: 40px; padding-top: 26px; border-top: 1px solid rgba(201, 162, 74, 0.3); scroll-margin-top: 24px; }
+.about-compare h2 { margin: 6px 0 0; font-family: var(--title); font-weight: 700; font-size: 24px; color: var(--text); }
+.about-compare ol { list-style: none; margin: 20px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 760px) { .about-compare ol { grid-template-columns: minmax(0, 1fr); } }
+.about-compare li { padding: 12px 14px; border: 1px solid rgba(201, 162, 74, 0.25); border-radius: 2px; background: rgba(0, 0, 0, 0.18); }
+.about-compare h3 { margin: 0; font-family: var(--title); font-size: 15.5px; font-weight: 700; color: var(--text); }
+.about-n { margin-right: 8px; font-family: var(--tip); font-size: 13px; font-weight: 400; color: var(--gold-2); }
+.about-compare li p { display: flex; gap: 8px; margin: 8px 0 0; font-size: 15px; line-height: 1.4; }
+.about-compare .mark { flex: none; width: 14px; font-weight: 700; }
+.about-compare .by-hand { color: var(--text-dim); }
+.about-compare .by-hand .mark { color: #ff7a5c; }
+.about-compare .by-vantage { margin-top: 6px; color: var(--text); }
+.about-compare .by-vantage .mark { color: var(--q2); }
+.about-compare .by-vantage b { color: var(--gold-2); }
+.about-compare code {
+  font-family: var(--tip); font-size: .88em; padding: 0 4px; border-radius: 2px;
+  background: rgba(255, 220, 140, 0.08); border: 1px solid rgba(201, 162, 74, 0.2); overflow-wrap: anywhere;
+}
