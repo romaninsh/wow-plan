@@ -10,9 +10,6 @@ ARG SERVER=romaninsh/vantage-server:1.10.2
 # image is for another platform.
 FROM --platform=$BUILDPLATFORM ${WEB_DEV} AS web
 ARG API
-# The site's GA4 stream; empty (the default) builds a site that sends nothing.
-ARG VITE_GA_MEASUREMENT_ID=
-ENV VITE_GA_MEASUREMENT_ID=${VITE_GA_MEASUREMENT_ID}
 RUN test -n "$API" || { echo "pass --build-arg API=<name> (api/<name>.yaml)" >&2; exit 1; }
 COPY --chown=node:node web/${API} /app
 RUN node /opt/vantage/entrypoint/main.mjs build --out /app/out
